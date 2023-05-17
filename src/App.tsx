@@ -20,11 +20,9 @@ import { shallow } from 'zustand/shallow'
 
 const selector = (state: AppState) => ({
   nodes: state.nodes,
-  nodeValues: state.nodeValues,
   edges: state.edges,
   onNodesChange: state.onNodesChange,
   setNodes: state.setNodes,
-  setNodeValues: state.setNodeValues,
   onEdgesChange: state.onEdgesChange,
   setEdges: state.setEdges,
   onConnect: state.onConnect,
@@ -33,11 +31,9 @@ const selector = (state: AppState) => ({
 const App = () => {
   const {
     nodes,
-    nodeValues,
     edges,
     onNodesChange,
     setNodes,
-    setNodeValues,
     onEdgesChange,
     setEdges,
     onConnect,
@@ -49,24 +45,24 @@ const App = () => {
   const { setViewport } = useReactFlow()
 
   useEffect(() => {
+    const saveFlow = () => {
+      if (rfInstance) {
+        const flow = rfInstance.toObject()
+        localStorage.setItem('flow', JSON.stringify(flow))
+      }
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key == 's') {
         e.preventDefault()
         console.log('saving')
-        if (rfInstance) {
-          const flow = rfInstance.toObject()
-          localStorage.setItem('flow', JSON.stringify(flow))
-          localStorage.setItem(
-            'flowValues',
-            JSON.stringify(nodeValues)
-          )
-        }
+        saveFlow()
       }
     }
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-      e.returnValue = 'Make sure to save your flow!'
+      // save flow
+      saveFlow()
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -81,7 +77,7 @@ const App = () => {
         handleBeforeUnload
       )
     }
-  }, [rfInstance, nodeValues])
+  }, [rfInstance])
 
   useEffect(() => {
     const restoreFlow = async () => {
@@ -98,21 +94,10 @@ const App = () => {
       setNodes(flow.nodes ?? [])
       setEdges(flow.edges ?? [])
       setViewport({ x, y, zoom })
-
-      const rawFlowValues =
-        localStorage.getItem('flowValues')
-      if (!rawFlowValues) {
-        return
-      }
-      const flowValues = JSON.parse(rawFlowValues)
-      if (!flowValues) {
-        return
-      }
-      setNodeValues(flowValues)
     }
 
     restoreFlow()
-  }, [setNodes, setEdges, setViewport, setNodeValues])
+  }, [setNodes, setEdges, setViewport])
 
   return (
     <div className='h-screen w-screen bg-slate-50'>

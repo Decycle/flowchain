@@ -14,29 +14,28 @@ import {
 import 'reactflow/dist/style.css'
 import { create } from 'zustand'
 
-type NodeValue = {
-  [key: string]: any
+interface NodeData {
+  userValues: {
+    [key: string]: any
+  }
+  dataValues: {
+    [key: string]: any
+  }
 }
 
+type DefaultNode = Node<NodeData>
+
 type AppState = {
-  nodes: Node[]
-  nodeValues: { [key: string]: NodeValue }
+  nodes: DefaultNode[]
   edges: Edge[]
   onNodesChange: OnNodesChange
   setNodes: (nodes: Node[]) => void
-  setNodeValues: (nodeValues: {
-    [key: string]: NodeValue
-  }) => void
   onEdgesChange: OnEdgesChange
   setEdges: (edges: Edge[]) => void
   onConnect: OnConnect
-  setNodeValue: (id: string, value: any) => void
-  updateNodeEdgeId: (
-    nodeId: string,
-    oldEdgeType: 'target' | 'source',
-    oldEdgeId: string,
-    newEdgeId: string
-  ) => void
+
+  setNodeUserValue: (id: string, value: any) => void
+  setNodeDataValue: (id: string, value: any) => void
 }
 
 const initialNodes: Node[] = [
@@ -92,6 +91,12 @@ const initialNodes: Node[] = [
     type: 'inputNode',
     data: {},
   },
+  {
+    id: '9',
+    position: { x: 1100, y: 300 },
+    type: 'dalleNode',
+    data: {},
+  },
 ]
 const initialEdges: Edge[] = [
   //   {
@@ -105,7 +110,6 @@ const initialEdges: Edge[] = [
 const useFlowStore = create<AppState>((set, get) => ({
   nodes: initialNodes,
   edges: initialEdges,
-  nodeValues: {},
   onNodesChange: (changes: NodeChange[]) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
@@ -114,11 +118,6 @@ const useFlowStore = create<AppState>((set, get) => ({
   setNodes: (nodes) => {
     set({
       nodes,
-    })
-  },
-  setNodeValues: (nodeValues) => {
-    set({
-      nodeValues,
     })
   },
   onEdgesChange: (changes: EdgeChange[]) => {
@@ -136,40 +135,51 @@ const useFlowStore = create<AppState>((set, get) => ({
       edges: addEdge(params, state.edges),
     }))
   },
-  setNodeValue: (id, value) => {
-    set((state) => ({
-      nodeValues: {
-        ...state.nodeValues,
-        [id]: value,
-      },
-    }))
-  },
-  updateNodeEdgeId: (
-    nodeId,
-    oldEdgeType,
-    oldEdgeId,
-    newEdgeId
-  ) => {
+  setNodeUserValue: (id, value) => {
     set((state) => {
-      const newEdges = state.edges.map((edge) => {
-        if (
-          edge.target === nodeId &&
-          edge.id === oldEdgeId
-        ) {
-          return {
-            ...edge,
-            targetHandle: newEdgeId,
-          }
-        }
-        return edge
-      })
-
       return {
-        edges: newEdges,
+        nodes: state.nodes.map((node) => {
+          if (node.id === id) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                userValues: {
+                  ...node.data.userValues,
+                  ...value,
+                },
+              },
+            }
+          } else {
+            return node
+          }
+        }),
+      }
+    })
+  },
+  setNodeDataValue: (id, value) => {
+    set((state) => {
+      return {
+        nodes: state.nodes.map((node) => {
+          if (node.id === id) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                dataValues: {
+                  ...node.data.dataValues,
+                  ...value,
+                },
+              },
+            }
+          } else {
+            return node
+          }
+        }),
       }
     })
   },
 }))
 
-export type { AppState }
+export type { AppState, DefaultNode }
 export default useFlowStore

@@ -3,46 +3,47 @@ import { useCallback } from 'react'
 import GenericNode, { NodeFunc } from '../base/genericNode'
 import useFlowStore from '../../store'
 
-type NodeData = {
-  prompt?: string
-}
 type NodeProps = {
   id: string
-  data: NodeData
 }
 
-const PromptNode = ({ data, id }: NodeProps) => {
-  const [inputValue, setInputValue] = useState(
-    data.prompt ?? ''
-  )
+const title = 'Prompt'
+const description =
+  'A node that outputs a prompt, pass in variables with {variable}'
+const outputLabels = ['prompt']
+
+const PromptNode = ({ id }: NodeProps) => {
   const [labels, setLabels] = useState<string[]>([])
 
-  const title = 'Prompt'
-  const description =
-    'A node that outputs a prompt, pass in variables with {variable}'
-  const outputLabels = ['prompt']
+  const [value, setValue, setNodeDataValue] = useFlowStore(
+    (state) => {
+      const value =
+        state.nodes.find((node) => node.id === id)?.data
+          .userValues?.template ?? ''
 
-  const updateNodeEdgeId = useFlowStore(
-    (state) => state.updateNodeEdgeId
-  )
-  const setNodeValue = useFlowStore(
-    (state) => state.setNodeValue
+      const setValue = (id: string, value: string) => {
+        state.setNodeUserValue(id, { template: value })
+        state.setNodeDataValue(id, { prompt: value })
+      }
+
+      return [value, setValue, state.setNodeDataValue]
+    }
   )
 
   useEffect(() => {
-    const rawMatches = inputValue.match(/{[^}]+}/g) ?? []
+    const rawMatches = value.match(/{[^}]+}/g) ?? []
     const matches = rawMatches
-      .map((s) => s.slice(1, -1).trim())
-      .filter((s) => s.length > 0)
+      .map((s: string) => s.slice(1, -1).trim())
+      .filter((s: string) => s.length > 0)
     setLabels(Array.from(new Set(matches)))
     if (matches.length === 0) {
-      setNodeValue(id, { prompt: inputValue })
+      setNodeDataValue(id, { prompt: value })
     }
-  }, [id, inputValue, setNodeValue])
+  }, [id, value, setNodeDataValue])
 
-  const func: NodeFunc<string, string> = useCallback(
+  const func: NodeFunc = useCallback(
     (inputs) => {
-      let output = inputValue
+      let output = value
 
       for (const label of labels) {
         if (inputs[label] == null) {
@@ -57,22 +58,22 @@ const PromptNode = ({ data, id }: NodeProps) => {
 
       return { prompt: output }
     },
-    [labels, inputValue]
+    [labels, value]
   )
 
   return (
     <GenericNode
+      id={id}
       data={{
         title,
         description,
         inputLabels: labels,
         outputLabels,
         func,
-      }}
-      id={id}>
+      }}>
       <textarea
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
+        value={value}
+        onChange={(e) => setValue(id, e.target.value)}
         className='w-full p-2 border border-gray-300 rounded-md mb-4 nodrag'
       />
     </GenericNode>

@@ -6,20 +6,16 @@ import GenericNode, {
 } from '../base/genericNode'
 import axios from 'axios'
 
-type NodeData = {
-  prompt?: string
-}
 type NodeProps = {
   id: string
-  data: NodeData
 }
 
-const title = 'OpenAI'
-const description = 'A node that connects to OpenAi'
+const title = 'OpenAI DALLE'
+const description = 'A node that connects to OpenAi DALLE-2'
 const inputLabels = ['input_prompt']
-const outputLabels = ['model_response']
+const outputLabels = ['image']
 
-const OpenAiNode = ({ data, id }: NodeProps) => {
+const DalleNode = ({ id }: NodeProps) => {
   const afunc: AsyncNodeFunc = useCallback(
     async (inputs) => {
       const input_prompt = inputs['input_prompt']
@@ -28,7 +24,7 @@ const OpenAiNode = ({ data, id }: NodeProps) => {
         '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'
 
       const openai_url =
-        'https://api.openai.com/v1/chat/completions'
+        'https://api.openai.com/v1/images/generations'
 
       const headers = {
         'Content-Type': 'application/json',
@@ -36,9 +32,7 @@ const OpenAiNode = ({ data, id }: NodeProps) => {
       }
 
       const requestData = {
-        model: 'gpt-3.5-turbo',
-
-        messages: [{ role: 'user', content: input_prompt }],
+        prompt: input_prompt,
       }
 
       console.log(requestData)
@@ -49,10 +43,9 @@ const OpenAiNode = ({ data, id }: NodeProps) => {
         { headers }
       )
 
-      const output =
-        response.data.choices[0].message.content
+      const imageUrl = response.data.data[0].url
 
-      return { model_response: output }
+      return { image: imageUrl }
     },
     []
   )
@@ -71,4 +64,4 @@ const OpenAiNode = ({ data, id }: NodeProps) => {
   )
 }
 
-export default OpenAiNode
+export default DalleNode

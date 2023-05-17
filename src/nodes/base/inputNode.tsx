@@ -13,22 +13,26 @@ type NodeDataProps = {
   data: NodeData
 }
 
+const title = 'Input'
+const description = 'Input value for this chain'
+const outputLabels = ['value']
+
 const InputNode = ({ id }: NodeDataProps) => {
   const [inputType, setInputType] = React.useState('text')
   const inputTypeOptions = ['text', 'number', 'image']
 
-  const [inputValue, setInputValue] = React.useState('')
-
-  const title = 'Input'
-  const description = 'Input value for this chain'
-
-  const setNodeValue = useFlowStore(
-    (state) => state.setNodeValue
+  const [inputValue, setInputValue] = useFlowStore(
+    (state) => {
+      const inputValue = state.nodes.find(
+        (node) => node.id === id
+      )?.data.userValues?.value
+      const setInputVale = (id: string, value: string) => {
+        state.setNodeUserValue(id, { value })
+        state.setNodeDataValue(id, { value })
+      }
+      return [inputValue, setInputVale]
+    }
   )
-
-  useEffect(() => {
-    setNodeValue(id, { value: inputValue })
-  }, [id, setNodeValue, inputValue])
 
   return (
     <GenericNode
@@ -36,7 +40,7 @@ const InputNode = ({ id }: NodeDataProps) => {
       data={{
         title,
         description,
-        outputLabels: ['value'],
+        outputLabels,
       }}>
       <label
         htmlFor='inputTypeSelect'
@@ -59,13 +63,26 @@ const InputNode = ({ id }: NodeDataProps) => {
         className='block text-sm font-semibold mb-1'>
         Value:
       </label>
-      <input
-        id='inputField'
-        type={inputType}
-        className='w-full p-2 border border-gray-300 rounded-md'
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-      />
+      {inputType === 'text' ? (
+        <textarea
+          id='inputField'
+          className='w-full p-2 border border-gray-300 rounded-md nodrag'
+          value={inputValue}
+          onChange={(e) =>
+            setInputValue(id, e.target.value)
+          }
+        />
+      ) : (
+        <input
+          id='inputField'
+          type={inputType}
+          className='w-full p-2 border border-gray-300 rounded-md nodrag'
+          value={inputValue}
+          onChange={(e) =>
+            setInputValue(id, e.target.value)
+          }
+        />
+      )}
     </GenericNode>
   )
 }
