@@ -80,6 +80,18 @@ const initialNodes: Node[] = [
     type: 'outputNode',
     data: {},
   },
+  {
+    id: '7',
+    position: { x: 1100, y: 300 },
+    type: 'inputNode',
+    data: {},
+  },
+  {
+    id: '8',
+    position: { x: 1100, y: 300 },
+    type: 'inputNode',
+    data: {},
+  },
 ]
 const initialEdges: Edge[] = [
   //   {

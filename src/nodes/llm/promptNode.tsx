@@ -45,10 +45,14 @@ const PromptNode = ({ data, id }: NodeProps) => {
       let output = inputValue
 
       for (const label of labels) {
-        if (!inputs[label]) {
-          continue
+        if (inputs[label] == null) {
+          return { prompt: '' }
         }
-        output = output.replace(`{${label}}`, inputs[label])
+        //replace all instances of {label} with the input value
+        output = output.replace(
+          new RegExp(`{${label}}`, 'g'),
+          inputs[label]
+        )
       }
 
       return { prompt: output }

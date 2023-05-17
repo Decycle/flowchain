@@ -106,6 +106,7 @@ const GenericNode = <I, O>({
 
     for (const label of inputLabels) {
       if (!(label in childNodeValues)) {
+        setNodeValue(id, null)
         return
       }
     }
@@ -207,7 +208,7 @@ const GenericNode = <I, O>({
 
       {lazy && (
         <button
-          className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded'
+          className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded nodrag'
           onClick={() => setButtonClicked(true)}>
           Update
         </button>
