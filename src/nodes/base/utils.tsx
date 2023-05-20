@@ -3,17 +3,11 @@ const pseudorandom = (seed: number) => {
   return x - Math.floor(x)
 }
 
-const getHandleColor = (
-  type: string,
-  id: string,
-  nodeId: string
-) => {
-  const combinedString = `${type}${id}${nodeId}`
+const getHandleColor = (name: string) => {
   let hash = 0
 
-  for (let i = 0; i < combinedString.length; i++) {
-    hash =
-      combinedString.charCodeAt(i) + ((hash << 5) - hash)
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
   }
 
   const hue = Math.floor(pseudorandom(hash) * 360)

@@ -41,7 +41,7 @@ const OpenAiNode = ({ data, id }: NodeProps) => {
         messages: [{ role: 'user', content: input_prompt }],
       }
 
-      console.log(requestData)
+      console.log('requestion chatgpt:\n', requestData)
 
       const response = await axios.post(
         openai_url,

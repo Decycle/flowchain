@@ -35,7 +35,7 @@ const DalleNode = ({ id }: NodeProps) => {
         prompt: input_prompt,
       }
 
-      console.log(requestData)
+      console.log('requesting dalle:\n', requestData)
 
       const response = await axios.post(
         openai_url,

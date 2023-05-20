@@ -9,6 +9,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   EdgeChange,
+  XYPosition,
 } from 'reactflow'
 
 import 'reactflow/dist/style.css'
@@ -28,88 +29,32 @@ type DefaultNode = Node<NodeData>
 type AppState = {
   nodes: DefaultNode[]
   edges: Edge[]
+  currentId: number
+  setCurrentId: (id: number) => void
   onNodesChange: OnNodesChange
   setNodes: (nodes: Node[]) => void
+  addNode: (type: string, position: XYPosition) => void
   onEdgesChange: OnEdgesChange
   setEdges: (edges: Edge[]) => void
   onConnect: OnConnect
+  onNodesDelete: (nodes: Node[]) => void
 
   setNodeUserValue: (id: string, value: any) => void
   setNodeDataValue: (id: string, value: any) => void
 }
 
-const initialNodes: Node[] = [
-  {
-    id: '1',
-    position: { x: 300, y: 300 },
-    type: 'inputNode',
-    data: {},
-  },
-  {
-    id: '2',
-    position: { x: 600, y: 300 },
-    type: 'promptNode',
-    data: {
-      prompt: 'It is {current_time}, What is your name?',
-    },
-  },
-  {
-    id: '3',
-    position: { x: 600, y: 400 },
-    type: 'promptNode',
-    data: {
-      prompt: 'It is {current_time}, What is your name?',
-    },
-  },
-  {
-    id: '4',
-    position: { x: 500, y: 300 },
-    type: 'openAiNode',
-    data: {},
-  },
-  {
-    id: '5',
-    position: { x: 400, y: 300 },
-    type: 'openAiNode',
-    data: {},
-  },
-  {
-    id: '6',
-    position: { x: 1100, y: 300 },
-    type: 'outputNode',
-    data: {},
-  },
-  {
-    id: '7',
-    position: { x: 1100, y: 300 },
-    type: 'inputNode',
-    data: {},
-  },
-  {
-    id: '8',
-    position: { x: 1100, y: 300 },
-    type: 'inputNode',
-    data: {},
-  },
-  {
-    id: '9',
-    position: { x: 1100, y: 300 },
-    type: 'dalleNode',
-    data: {},
-  },
-]
-const initialEdges: Edge[] = [
-  //   {
-  //     id: 'e1-2',
-  //     source: '1',
-  //     target: '3',
-  //     targetHandle: 'output',
-  //   },
-]
+const initialNodes: Node[] = []
+const initialEdges: Edge[] = []
 
 const useFlowStore = create<AppState>((set, get) => ({
   nodes: initialNodes,
   edges: initialEdges,
+  currentId: 0,
+  setCurrentId: (id) => {
+    set({
+      currentId: id,
+    })
+  },
   onNodesChange: (changes: NodeChange[]) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
@@ -118,6 +63,23 @@ const useFlowStore = create<AppState>((set, get) => ({
   setNodes: (nodes) => {
     set({
       nodes,
+    })
+  },
+  addNode: (type: string, position: XYPosition) => {
+    set((state) => {
+      const newNode = {
+        type,
+        position,
+        id: `${state.currentId}`,
+        data: {
+          userValues: {},
+          dataValues: {},
+        },
+      }
+      return {
+        nodes: [...state.nodes, newNode],
+        currentId: state.currentId + 1,
+      }
     })
   },
   onEdgesChange: (changes: EdgeChange[]) => {
@@ -131,9 +93,21 @@ const useFlowStore = create<AppState>((set, get) => ({
     })
   },
   onConnect: (params) => {
-    set((state) => ({
-      edges: addEdge(params, state.edges),
-    }))
+    set((state) => {
+      // remove existing edges connected to target
+      const newEdges = state.edges.filter(
+        (edge) =>
+          edge.target !== params.target ||
+          edge.targetHandle !== params.targetHandle
+      )
+
+      return {
+        edges: addEdge(params, newEdges),
+      }
+    })
+  },
+  onNodesDelete: (nodes) => {
+    console.log('delete nodes:', nodes)
   },
   setNodeUserValue: (id, value) => {
     set((state) => {

@@ -55,11 +55,6 @@ const GenericNode = memo(
             continue
           }
 
-          // if (id === '6') {
-          //   console.log(sourceHandle)
-          //   console.log(sourceNode.data.dataValues)
-          // }
-
           const sourceNodeData =
             sourceNode.data.dataValues[sourceHandle]
 
@@ -76,7 +71,6 @@ const GenericNode = memo(
         }
         for (const key in prev) {
           if (prev[key] !== next[key]) {
-            // console.log('not equal')
             return false
           }
         }
@@ -122,8 +116,6 @@ const GenericNode = memo(
         }
       }
 
-      console.log(id, childNodeValues, inputLabels)
-
       if (func) {
         const output = func(childNodeValues)
         setNodeDataValue(id, output)
@@ -148,7 +140,7 @@ const GenericNode = memo(
     ])
 
     return (
-      <div className='bg-slate-50 rounded-md shadow-md p-4 flex flex-col items-start'>
+      <div className='bg-slate-50 rounded-md shadow-md p-4 flex flex-col items-start border-black'>
         <h2 className='text-xl font-semibold mb-2 '>
           {data.title}
         </h2>
@@ -165,11 +157,7 @@ const GenericNode = memo(
               position={Position.Right}
               className='bg-white w-2.5 h-2.5 border-2'
               style={{
-                borderColor: getHandleColor(
-                  'source',
-                  label,
-                  id
-                ),
+                borderColor: getHandleColor(label),
               }}
               id={label}
             />
@@ -184,11 +172,7 @@ const GenericNode = memo(
               position={Position.Left}
               className='bg-white w-2.5 h-2.5 border-2'
               style={{
-                borderColor: getHandleColor(
-                  'target',
-                  label,
-                  id
-                ),
+                borderColor: getHandleColor(label),
               }}
               id={label}
             />
@@ -208,36 +192,42 @@ const GenericNode = memo(
                 <h3 className='w-full mr-4 text-gray-800'>
                   {key}
                 </h3>
-                {nodeValue[key]?.includes('http') ? (
+                {nodeValue[key]
+                  ?.toString()
+                  .includes('http') ? (
                   <img
-                    src={nodeValue[key]}
+                    src={nodeValue[key]?.toString()}
                     alt='img'
-                    className='mb-3 max-w-md'
+                    className='mb-3 max-w-md no-export'
                   />
                 ) : (
-                  <p className='text-sm text-gray-700 mb-3 max-w-md'>
-                    {nodeValue[key]}
-                  </p>
+                  <div className='text-sm text-gray-700 mb-3 max-w-md whitespace-pre-wrap'>
+                    {nodeValue[key]?.toString()}
+                  </div>
                 )}
               </div>
             ))
-          ) : nodeValue[
-              Object.keys(nodeValue)[0]
-            ]?.includes('http') ? (
+          ) : nodeValue[Object.keys(nodeValue)[0]]
+              ?.toString()
+              .includes('http') ? (
             <img
-              src={nodeValue[Object.keys(nodeValue)[0]]}
+              src={nodeValue[
+                Object.keys(nodeValue)[0]
+              ]?.toString()}
               alt='img'
-              className='mb-3 max-w-md'
+              className='mb-3 max-w-md no-export'
             />
           ) : (
-            <p className='text-sm text-gray-700 mb-3 max-w-md'>
-              {nodeValue[Object.keys(nodeValue)[0]]}
-            </p>
+            <div className='text-sm text-gray-700 mb-3 max-w-md whitespace-pre-wrap'>
+              {nodeValue[
+                Object.keys(nodeValue)[0]
+              ]?.toString()}
+            </div>
           ))}
 
         {lazy && (
           <button
-            className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded nodrag'
+            className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-auto nodrag'
             onClick={() => setButtonClicked(true)}>
             Update
           </button>
