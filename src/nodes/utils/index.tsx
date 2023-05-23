@@ -1,5 +1,4 @@
 import SplitNode from './splitNode'
-
 const nodeTypes = {
   splitNode: SplitNode,
 }

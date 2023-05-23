@@ -34,6 +34,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/solid'
+import BaseNode from './nodes/baseNode'
 
 const downloadImage = async (dataUrl: string) => {
   const link = document.body.appendChild(
@@ -91,130 +92,23 @@ const DownloadButton = () => {
 const selector = (state: AppState) => ({
   nodes: state.nodes,
   edges: state.edges,
-  currentId: state.currentId,
-  setCurrentId: state.setCurrentId,
-  onNodesChange: state.onNodesChange,
-  setNodes: state.setNodes,
   addNode: state.addNode,
-  onEdgesChange: state.onEdgesChange,
-  setEdges: state.setEdges,
-  onConnect: state.onConnect,
-  onNodesDelete: state.onNodesDelete,
 })
 
+const appNodeTypes = {
+  baseNode: BaseNode,
+}
+
 const App = () => {
-  const {
-    nodes,
-    edges,
-    currentId,
-    setCurrentId,
-    onNodesChange,
-    setNodes,
-    addNode,
-    onEdgesChange,
-    setEdges,
-    onConnect,
-    onNodesDelete,
-  } = useFlowStore(selector, shallow)
+  const { nodes, edges, addNode } = useFlowStore(
+    selector,
+    shallow
+  )
 
   const rfInstance = useReactFlow()
-
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
 
   const { setViewport } = useReactFlow()
-
-  useEffect(() => {
-    const saveFlow = () => {
-      if (rfInstance) {
-        const flow = rfInstance.toObject()
-        const appData = {
-          flow,
-          currentId,
-        }
-        localStorage.setItem(
-          'flow',
-          JSON.stringify(appData)
-        )
-      }
-    }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key == 's') {
-        e.preventDefault()
-        console.log('saving')
-        saveFlow()
-        return
-      }
-      if (
-        ((e.ctrlKey || e.metaKey) && e.key == 'y') ||
-        ((e.ctrlKey || e.metaKey) &&
-          e.shiftKey &&
-          e.key == 'z')
-      ) {
-        e.preventDefault()
-        console.log('redo')
-        return
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key == 'z') {
-        e.preventDefault()
-        console.log('undo')
-        return
-      }
-    }
-
-    const handleBeforeUnload = () => {
-      // save flow
-      saveFlow()
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener(
-      'beforeunload',
-      handleBeforeUnload
-    )
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener(
-        'beforeunload',
-        handleBeforeUnload
-      )
-    }
-  }, [rfInstance, currentId])
-
-  useEffect(() => {
-    const restoreFlow = async () => {
-      const rawFlow = localStorage.getItem('flow')
-      if (!rawFlow) {
-        return
-      }
-      const appData = JSON.parse(rawFlow)
-      console.log('appData', appData)
-      if (!appData) {
-        return
-      }
-
-      const { flow, currentId } = appData
-      if (!flow || !currentId) {
-        return
-      }
-
-      const { x = 0, y = 0, zoom = 1 } = flow.viewport
-
-      if (flow.nodes) {
-        setNodes(flow.nodes)
-      }
-      if (flow.edges) {
-        setEdges(flow.edges)
-      }
-
-      setViewport({ x, y, zoom })
-      setCurrentId(currentId)
-    }
-
-    restoreFlow()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const onDragOver = useCallback(
     (event: React.DragEvent) => {
@@ -248,6 +142,8 @@ const App = () => {
         y: event.clientY - reactFlowBounds.top,
       })
 
+      if (type !== 'openai-chat') return
+
       addNode(type, position)
       console.log('adding node: ', type)
     },
@@ -269,11 +165,7 @@ const App = () => {
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodesDelete={onNodesDelete}
+          nodeTypes={appNodeTypes}
           onDragOver={onDragOver}
           onDrop={onDrop}
           minZoom={0.15}
