@@ -1,13 +1,18 @@
 import axios from 'axios'
-import { AsyncNodeFunc, NodeConfig, Label } from './types'
+import {
+  NodeConfig,
+  Label,
+  StringData,
+  FunctionInput,
+} from '../../types'
 import {
   NodeInputMissingError,
+  NodeInputTypeMismatchError,
   OpenAIChatGPTRequestError,
-} from './errors'
+} from '../errors'
 import * as TE from 'fp-ts/TaskEither'
 import { flow, pipe } from 'fp-ts/lib/function'
 import { log } from 'fp-ts/lib/Console'
-import * as E from 'fp-ts/lib/Either'
 
 const title = 'OpenAI'
 const description = 'A node that connects to OpenAi'
@@ -18,20 +23,12 @@ const inputLabels: Label[] = [
   },
 ]
 
-type Inputs = {
-  input_prompt?: string
-}
-
 const outputLabels: Label[] = [
   {
     _tag: 'string',
     value: 'model_response',
   },
 ]
-
-type Outputs = {
-  model_response: string
-}
 
 const open_ai_key =
   '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'
@@ -49,11 +46,22 @@ const getRequest = (prompt: string) => ({
   messages: [{ role: 'user', content: prompt }],
 })
 
-const afunc = ({ input_prompt }: Inputs) =>
+const afunc = ({ inputs }: FunctionInput) =>
   pipe(
-    input_prompt,
+    inputs.input_prompt,
     TE.fromNullable(
       NodeInputMissingError.of('input_prompt')
+    ),
+    TE.chainW((input_prompt) =>
+      input_prompt._tag === 'string'
+        ? TE.right(input_prompt.value)
+        : TE.left(
+            NodeInputTypeMismatchError.of(
+              'input_prompt',
+              'string',
+              input_prompt._tag
+            )
+          )
     ),
     TE.map(getRequest),
     TE.chainFirstW(
@@ -72,18 +80,26 @@ const afunc = ({ input_prompt }: Inputs) =>
           OpenAIChatGPTRequestError.of(String(reason))
       )
     ),
-    TE.map((response) => ({
-      model_response: response.data.choices[0]
-        .message as string,
-    }))
+    TE.map((response) => {
+      const response_data = {
+        model_response: {
+          _tag: 'string',
+          value: response.data.choices[0].message
+            .content as string,
+        } as StringData,
+      }
+      console.log('response_data', response_data)
+      return response_data
+    })
   )
 
-const OpenAiNode: NodeConfig = {
+const ChatGPTNode: NodeConfig = {
   title,
   description,
   inputLabels,
   outputLabels,
   afunc,
+  lazy: true,
 }
 
-export default OpenAiNode
+export default ChatGPTNode

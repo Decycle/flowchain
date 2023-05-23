@@ -14,7 +14,7 @@ import {
 
 import 'reactflow/dist/style.css'
 import { create } from 'zustand'
-import { NodeConfig } from './nodes/types'
+import { Content, Data, NodeConfig } from './types.ts'
 import { v4 as uuidv4 } from 'uuid'
 import * as O from 'fp-ts/Option'
 import * as E from 'fp-ts/Either'
@@ -25,9 +25,13 @@ import {
 } from './nodes/errors'
 import nodeConfigs from './nodes'
 import { Lens } from 'monocle-ts'
-import { arrayTraversal } from './nodes/lens.ts'
+import {
+  arrayTraversal,
+  nodeContentLens,
+  nodeOutputLens,
+} from './lens.ts'
 import { pipe } from 'fp-ts/lib/function'
-import { nodeDataLens, appNodesLens } from './nodes/lens'
+import { nodeDataLens, appNodesLens } from './lens.ts'
 
 type DefaultNode = Node<NodeConfig>
 type DefaultEdge = Edge
@@ -37,7 +41,7 @@ export type AppValue = {
   edges: DefaultEdge[]
 }
 
-type NodeConfigsString = keyof typeof nodeConfigs
+export type NodeConfigsString = keyof typeof nodeConfigs
 
 type AppActions = {
   addNode: (
@@ -55,11 +59,27 @@ type AppActions = {
     nodeUpdate: Partial<NodeConfig>
   ) => E.Either<NodeNotFoundError, void>
 
+  setNodeOutput: (
+    nodeId: string,
+    output: Record<string, Data>,
+    replace?: boolean
+  ) => E.Either<NodeNotFoundError, void>
+
+  setNodeContent: (
+    nodeId: string,
+    content: Record<string, Content>,
+    replace?: boolean
+  ) => E.Either<NodeNotFoundError, void>
+
   deleteEdge: (
     edgeId: string
   ) => E.Either<EdgeNotFoundError, void>
   getEdges: () => DefaultEdge[]
   getEdge: (edgeId: string) => O.Option<DefaultEdge>
+
+  onNodesChange: OnNodesChange
+  onEdgesChange: OnEdgesChange
+  onConnect: OnConnect
 }
 
 type AppState = AppValue & AppActions
@@ -137,6 +157,76 @@ const useFlowStore = create<AppState>((set, get) => ({
     )
   },
 
+  setNodeOutput: (nodeId, output, replace) => {
+    const nodesOutputUpdate = (
+      nodeDataOutput: Record<string, Data>
+    ): Record<string, Data> => ({
+      ...nodeDataOutput,
+      ...output,
+    })
+
+    const nodesOutputReplace = () => output
+
+    return pipe(
+      get().nodes,
+      A.findFirst((node) => node.id === nodeId),
+      E.fromOption(() => new NodeNotFoundError(nodeId)),
+      E.chain(() => {
+        set(
+          appNodesLens
+            .composeTraversal(arrayTraversal<DefaultNode>())
+            .filter((node) => node.id === nodeId)
+            .composeLens(nodeDataLens)
+            .composeLens(nodeOutputLens)
+            .modify((output) =>
+              pipe(
+                output ?? ({} as Record<string, Data>),
+                replace
+                  ? nodesOutputReplace
+                  : nodesOutputUpdate
+              )
+            )
+        )
+        return E.right(undefined)
+      })
+    )
+  },
+
+  setNodeContent: (nodeId, content, replace) => {
+    const nodesContentUpdate = (
+      nodeDataOutput: Record<string, Content>
+    ): Record<string, Data> => ({
+      ...nodeDataOutput,
+      ...content,
+    })
+
+    const nodesContentReplace = () => content
+
+    return pipe(
+      get().nodes,
+      A.findFirst((node) => node.id === nodeId),
+      E.fromOption(() => new NodeNotFoundError(nodeId)),
+      E.chain(() => {
+        set(
+          appNodesLens
+            .composeTraversal(arrayTraversal<DefaultNode>())
+            .filter((node) => node.id === nodeId)
+            .composeLens(nodeDataLens)
+            .composeLens(nodeContentLens)
+            .modify((output) =>
+              pipe(
+                output ?? ({} as Record<string, Content>),
+                replace
+                  ? nodesContentReplace
+                  : nodesContentUpdate
+              )
+            )
+        )
+        return E.right(undefined)
+      })
+    )
+  },
+
   deleteEdge: (edgeId) => {
     return pipe(
       get().edges,
@@ -162,32 +252,32 @@ const useFlowStore = create<AppState>((set, get) => ({
     )
   },
 
-  // onNodesChange: (changes: NodeChange[]) => {
-  //   set({
-  //     nodes: applyNodeChanges(changes, get().nodes),
-  //   })
-  // },
+  onNodesChange: (changes: NodeChange[]) => {
+    set({
+      nodes: applyNodeChanges(changes, get().nodes),
+    })
+  },
 
-  // onEdgesChange: (changes: EdgeChange[]) => {
-  //   set({
-  //     edges: applyEdgeChanges(changes, get().edges),
-  //   })
-  // },
+  onEdgesChange: (changes: EdgeChange[]) => {
+    set({
+      edges: applyEdgeChanges(changes, get().edges),
+    })
+  },
 
-  // onConnect: (params) => {
-  //   set((state) => {
-  //     // remove existing edges connected to target
-  //     const newEdges = state.edges.filter(
-  //       (edge) =>
-  //         edge.target !== params.target ||
-  //         edge.targetHandle !== params.targetHandle
-  //     )
+  onConnect: (params) => {
+    set((state) => {
+      // remove existing edges connected to target
+      const newEdges = state.edges.filter(
+        (edge) =>
+          edge.target !== params.target ||
+          edge.targetHandle !== params.targetHandle
+      )
 
-  //     return {
-  //       edges: addEdge(params, newEdges),
-  //     }
-  //   })
-  // },
+      return {
+        edges: addEdge(params, newEdges),
+      }
+    })
+  },
 }))
 
 export type { AppState, DefaultNode }

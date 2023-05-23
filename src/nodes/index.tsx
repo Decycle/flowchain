@@ -4,8 +4,9 @@
 // import functionNodeTypes from './functions'
 // import utilNodeTypes from './utils'
 
-import OpenAiNode from './testNode'
-
+import IONodeConfigs from './IO'
+import LLMNodeConfigs from './llm'
+import imageNodeConfigs from './image'
 // const nodeTypes = {
 //   ...baseNodeTypes,
 //   ...llmNodeTypes,
@@ -17,7 +18,9 @@ import OpenAiNode from './testNode'
 // export default nodeTypes
 
 const nodeConfigs = {
-  'openai-chat': OpenAiNode,
+  ...IONodeConfigs,
+  ...LLMNodeConfigs,
+  ...imageNodeConfigs,
 }
 
 export default nodeConfigs

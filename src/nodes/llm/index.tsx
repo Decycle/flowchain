@@ -1,9 +1,7 @@
-import OpenAiNode from './openAiNode'
-import PromptNode from './promptNode'
+import ChatGPTNode from './chatgptNode'
 
-const nodeTypes = {
-  promptNode: PromptNode,
-  openAiNode: OpenAiNode,
+const nodeConfigs = {
+  chatgpt: ChatGPTNode,
 }
 
-export default nodeTypes
+export default nodeConfigs

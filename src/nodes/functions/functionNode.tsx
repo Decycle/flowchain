@@ -78,7 +78,7 @@ const BaseFunctionNode = ({ id, lazy }: NodeProps) => {
       setLabels(args)
       setCustomFunc(() => func)
     } catch (e) {
-      console.log(e)
+      console.error(e)
     }
   }, [value])
 

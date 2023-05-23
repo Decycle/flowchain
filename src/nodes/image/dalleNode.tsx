@@ -1,67 +1,104 @@
-import { useEffect, useState } from 'react'
-import { useCallback } from 'react'
-import GenericNode, {
-  AsyncNodeFunc,
-  NodeFunc,
-} from '../base/genericNode'
 import axios from 'axios'
-
-type NodeProps = {
-  id: string
-}
+import {
+  NodeConfig,
+  Label,
+  StringData,
+  FunctionInput,
+  ImageUrlData,
+} from '../../types'
+import {
+  NodeInputMissingError,
+  NodeInputTypeMismatchError,
+  OpenAIChatGPTRequestError,
+} from '../errors'
+import * as TE from 'fp-ts/TaskEither'
+import { flow, pipe } from 'fp-ts/lib/function'
+import { log } from 'fp-ts/lib/Console'
 
 const title = 'OpenAI DALLE'
 const description = 'A node that connects to OpenAi DALLE-2'
-const inputLabels = ['input_prompt']
-const outputLabels = ['image']
+const inputLabels: Label[] = [
+  {
+    _tag: 'string',
+    value: 'input_prompt',
+  },
+]
 
-const DalleNode = ({ id }: NodeProps) => {
-  const afunc: AsyncNodeFunc = useCallback(
-    async (inputs) => {
-      const input_prompt = inputs['input_prompt']
+const outputLabels: Label[] = [
+  {
+    _tag: 'imageUrl',
+    value: 'image',
+  },
+]
 
-      const open_ai_key =
-        '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'
+const open_ai_key =
+  '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'
 
-      const openai_url =
-        'https://api.openai.com/v1/images/generations'
+const openai_url =
+  'https://api.openai.com/v1/images/generations'
 
-      const headers = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${open_ai_key}`,
-      }
+const headers = {
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${open_ai_key}`,
+}
 
-      const requestData = {
-        prompt: input_prompt,
-      }
+const getRequest = (prompt: string) => ({
+  prompt,
+})
 
-      console.log('requesting dalle:\n', requestData)
-
-      const response = await axios.post(
-        openai_url,
-        requestData,
-        { headers }
+const afunc = ({ inputs }: FunctionInput) =>
+  pipe(
+    inputs.input_prompt,
+    TE.fromNullable(
+      NodeInputMissingError.of('input_prompt')
+    ),
+    TE.chainW((input_prompt) =>
+      input_prompt._tag === 'string'
+        ? TE.right(input_prompt.value)
+        : TE.left(
+            NodeInputTypeMismatchError.of(
+              'input_prompt',
+              'string',
+              input_prompt._tag
+            )
+          )
+    ),
+    TE.map(getRequest),
+    TE.chainFirstW(
+      flow(
+        (requestData) =>
+          `Chatgpt Request: ${JSON.stringify(requestData)}`,
+        log,
+        TE.fromIO
       )
-
-      const imageUrl = response.data.data[0].url
-
-      return { image: imageUrl }
-    },
-    []
+    ),
+    TE.chainW((requestData) =>
+      TE.tryCatch(
+        () =>
+          axios.post(openai_url, requestData, { headers }),
+        (reason) =>
+          OpenAIChatGPTRequestError.of(String(reason))
+      )
+    ),
+    TE.map((response) => {
+      const response_data = {
+        model_response: {
+          _tag: 'imageUrl',
+          value: response.data.data[0].url as string,
+        } as ImageUrlData,
+      }
+      console.log('response_data', response_data)
+      return response_data
+    })
   )
 
-  return (
-    <GenericNode
-      data={{
-        title,
-        description,
-        inputLabels,
-        outputLabels,
-        afunc,
-      }}
-      id={id}
-      lazy></GenericNode>
-  )
+const DalleNode: NodeConfig = {
+  title,
+  description,
+  inputLabels,
+  outputLabels,
+  afunc,
+  lazy: true,
 }
 
 export default DalleNode

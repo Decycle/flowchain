@@ -8,3 +8,13 @@ export const monoidObject = <K extends string, V>(): Monoid<
   concat: (x, y) => Object.assign({}, x, y),
   empty: {} as Record<K, V>,
 })
+
+export const log = <A>(a: A): A => {
+  console.log(a)
+  return a
+}
+
+export const error = <A>(a: A): A => {
+  console.error(a)
+  return a
+}

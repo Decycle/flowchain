@@ -34,7 +34,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/solid'
-import BaseNode from './nodes/baseNode'
+import BaseNode from './nodes/base/baseNode'
+import nodeConfigs from './nodes'
+import { NodeConfigsString } from './store'
 
 const downloadImage = async (dataUrl: string) => {
   const link = document.body.appendChild(
@@ -93,6 +95,9 @@ const selector = (state: AppState) => ({
   nodes: state.nodes,
   edges: state.edges,
   addNode: state.addNode,
+  onNodesChange: state.onNodesChange,
+  onEdgesChange: state.onEdgesChange,
+  onConnect: state.onConnect,
 })
 
 const appNodeTypes = {
@@ -100,10 +105,14 @@ const appNodeTypes = {
 }
 
 const App = () => {
-  const { nodes, edges, addNode } = useFlowStore(
-    selector,
-    shallow
-  )
+  const {
+    nodes,
+    edges,
+    addNode,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+  } = useFlowStore(selector, shallow)
 
   const rfInstance = useReactFlow()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
@@ -142,10 +151,10 @@ const App = () => {
         y: event.clientY - reactFlowBounds.top,
       })
 
-      if (type !== 'openai-chat') return
-
-      addNode(type, position)
-      console.log('adding node: ', type)
+      if (Object.keys(nodeConfigs).includes(type)) {
+        addNode(type as NodeConfigsString, position)
+        console.log('adding node: ', type)
+      }
     },
     [addNode, rfInstance]
   )
@@ -168,6 +177,9 @@ const App = () => {
           nodeTypes={appNodeTypes}
           onDragOver={onDragOver}
           onDrop={onDrop}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
           minZoom={0.15}
           fitView>
           <Controls>

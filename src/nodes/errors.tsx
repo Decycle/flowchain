@@ -11,6 +11,27 @@ export class NodeInputMissingError extends Error {
     new NodeInputMissingError(input)
 }
 
+export class NodeInputTypeMismatchError extends Error {
+  _tag: 'NodeInputTypeMismatchError'
+
+  constructor(
+    input: string,
+    expected: string,
+    actual: string
+  ) {
+    super(`
+        Input ${input} type mismatch. Expected ${expected}, got ${actual}`)
+    this._tag = 'NodeInputTypeMismatchError'
+  }
+
+  public static of = (
+    input: string,
+    expected: string,
+    actual: string
+  ) =>
+    new NodeInputTypeMismatchError(input, expected, actual)
+}
+
 export class NodeAlreadyExistsError extends Error {
   _tag: 'NodeAlreadyExistsError'
 
