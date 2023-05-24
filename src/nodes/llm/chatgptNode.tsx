@@ -4,6 +4,7 @@ import {
   Label,
   StringData,
   FunctionInput,
+  NodeComponent,
 } from '../../types'
 import {
   NodeInputMissingError,
@@ -93,13 +94,21 @@ const afunc = ({ inputs }: FunctionInput) =>
     })
   )
 
-const ChatGPTNode: NodeConfig = {
+const chatGPTNodeConfig: NodeConfig = {
   title,
   description,
   inputLabels,
   outputLabels,
-  afunc,
   lazy: true,
 }
 
-export default ChatGPTNode
+const chatGPTNode: NodeComponent = {
+  config: chatGPTNodeConfig,
+  afunc,
+}
+
+const nodes = {
+  chatgpt: chatGPTNode,
+}
+
+export default nodes

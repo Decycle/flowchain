@@ -1,9 +1,9 @@
-import InputNode from './inputNode'
-import OutputNode from './outputNode'
+import inputNode from './inputNode'
+import outputNode from './outputNode'
 
-const nodeConfigs = {
-  input: InputNode,
-  output: OutputNode,
+const IONodes = {
+  ...inputNode,
+  ...outputNode,
 }
 
-export default nodeConfigs
+export default IONodes

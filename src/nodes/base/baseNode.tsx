@@ -7,8 +7,12 @@ import React, {
 import { Handle, Position } from 'reactflow'
 import getHandleColor from './utils'
 import useFlowStore, { DefaultNode } from '../../store'
-import { Content, Data, StringData } from '../../types'
-import { NodeNotFoundError } from '../errors'
+import { Content, Contents, Data, Datas } from '../../types'
+import {
+  NodeComponentIdMissingError,
+  NodeComponentIdNotFoundError,
+  NodeNotFoundError,
+} from '../errors'
 import { flow, pipe } from 'fp-ts/lib/function'
 import * as E from 'fp-ts/lib/Either'
 import * as T from 'fp-ts/lib/Task'
@@ -18,6 +22,7 @@ import * as O from 'fp-ts/lib/Option'
 import { log, monoidObject } from '../../fp-ts-utils'
 import { sequenceT } from 'fp-ts/lib/Apply'
 import { shallow } from 'zustand/shallow'
+import nodeComponents from '..'
 
 const BaseNode = ({ id }: { id: string }) => {
   const node = pipe(
@@ -34,11 +39,11 @@ const BaseNode = ({ id }: { id: string }) => {
     node: DefaultNode,
     handle: string | null | undefined
   ) =>
-    node.data.output && handle && node.data.output[handle]
-      ? O.some(node.data.output[handle])
+    node.data.outputs && handle && node.data.outputs[handle]
+      ? O.some(node.data.outputs[handle])
       : O.none
 
-  const parentNodeValues = useFlowStore(
+  const parentNodeValues: Datas = useFlowStore(
     (state) =>
       pipe(
         state.getEdges(),
@@ -57,7 +62,7 @@ const BaseNode = ({ id }: { id: string }) => {
           )
         ),
         A.filterMap((tuple) => tuple),
-        A.foldMap(monoidObject<string, Data>())(
+        A.foldMap(monoidObject<string, Data | null>())(
           ([handle, value]) => ({
             [handle]: value,
           })
@@ -72,7 +77,7 @@ const BaseNode = ({ id }: { id: string }) => {
     inputLabels,
     outputLabels,
     lazy,
-    output,
+    outputs,
   ] = pipe(
     node,
     O.map((node) => node.data),
@@ -84,36 +89,115 @@ const BaseNode = ({ id }: { id: string }) => {
         data.inputLabels,
         data.outputLabels,
         data.lazy,
-        data.output || {},
+        data.outputs || {},
       ]
     )
   )
 
-  const content = useFlowStore(
+  const contents = useFlowStore(
     (state) =>
       pipe(
         state.getNode(id),
-        O.map((node) => node.data.content || {}),
-        O.getOrElse(() => ({} as Record<string, Content>))
+        O.map((node) => node.data.contents ?? {}),
+        O.getOrElse(() => ({} as Contents))
       ),
     shallow
   )
 
-  const [Component, func, afunc] = pipe(
+  const [getInputLabels, getOutputLabels] = pipe(
     node,
     O.map((node) => node.data),
     O.fold(
-      () => [undefined, undefined, undefined],
-      (data) => [data.Component, data.func, data.afunc]
+      () => [undefined, undefined],
+      (data) => [data.getInputs, data.getOutputs]
     )
   )
 
-  const [setNodeOutput, setNodeContent] = useFlowStore(
-    (state) => [state.setNodeOutput, state.setNodeContent]
+  const [func, afunc, Component] = pipe(
+    node,
+    O.chain((node) =>
+      pipe(node.data.componentId, O.fromNullable)
+    ),
+    E.fromOption(() => NodeComponentIdMissingError.of()),
+    E.chainW(
+      flow(
+        E.fromPredicate(
+          (
+            componentId
+          ): componentId is keyof typeof nodeComponents =>
+            componentId in nodeComponents,
+          (componentId) =>
+            NodeComponentIdNotFoundError.of(componentId)
+        ),
+        E.map((componentId) => nodeComponents[componentId])
+      )
+    ),
+    E.match(
+      (e) => {
+        console.error(e)
+        return [undefined, undefined, undefined]
+      },
+      (component) => [
+        component.func,
+        component.afunc,
+        component.component,
+      ]
+    )
   )
+
+  const [
+    setNodeOutputs,
+    setNodeContents,
+    setNodeInputLabels,
+    setNodeOutputLabels,
+  ] = useFlowStore((state) => [
+    state.setNodeOutputs,
+    state.setNodeContents,
+    state.setNodeInputLabels,
+    state.setNodeOutputLabels,
+  ])
 
   const [buttonClicked, setButtonClicked] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
+
+  const getLabels = () => {
+    pipe(
+      getInputLabels,
+      O.fromNullable,
+      O.map((func) =>
+        pipe(
+          func(contents),
+          E.chainW((labels) =>
+            setNodeInputLabels(id, labels)
+          ),
+          E.mapLeft((e) => console.error(e))
+        )
+      )
+    )
+
+    pipe(
+      getOutputLabels,
+      O.fromNullable,
+      O.map((func) =>
+        pipe(
+          func(contents),
+          E.chainW((labels) =>
+            setNodeOutputLabels(id, labels)
+          ),
+          E.mapLeft((e) => console.error(e))
+        )
+      )
+    )
+  }
+
+  useEffect(getLabels, [
+    id,
+    contents,
+    getInputLabels,
+    getOutputLabels,
+    setNodeInputLabels,
+    setNodeOutputLabels,
+  ])
 
   const runFunctions = () => {
     if (lazy) {
@@ -132,12 +216,16 @@ const BaseNode = ({ id }: { id: string }) => {
     const runFunc = () =>
       pipe(
         func,
+        (func) => {
+          console.log('func', func)
+          return func
+        },
         O.fromNullable,
         O.chain((func) =>
           pipe(
             func({
               inputs: parentNodeValues,
-              content,
+              contents,
             }),
             E.getOrElseW((e) => {
               console.error(e)
@@ -147,7 +235,7 @@ const BaseNode = ({ id }: { id: string }) => {
           )
         ),
         O.map((output) => {
-          setNodeOutput(id, output)
+          setNodeOutputs(id, output)
         })
       )
 
@@ -157,7 +245,7 @@ const BaseNode = ({ id }: { id: string }) => {
         O.fromNullable,
         O.map((func) =>
           pipe(
-            func({ inputs: parentNodeValues, content }),
+            func({ inputs: parentNodeValues, contents }),
             TE.getOrElseW((e) => {
               console.error(e)
               setIsRunning(false)
@@ -174,7 +262,7 @@ const BaseNode = ({ id }: { id: string }) => {
                 output,
                 O.fromNullable,
                 O.map((output) => {
-                  setNodeOutput(id, output)
+                  setNodeOutputs(id, output)
                   setIsRunning(false)
                 })
               )
@@ -197,10 +285,10 @@ const BaseNode = ({ id }: { id: string }) => {
     isRunning,
     id,
     parentNodeValues,
-    setNodeOutput,
+    setNodeOutputs,
     inputLabels,
     buttonClicked,
-    content,
+    contents,
   ])
 
   return (
@@ -230,10 +318,11 @@ const BaseNode = ({ id }: { id: string }) => {
       <div className='mb-2' />
       {Component && (
         <Component
-          content={content}
-          setContent={(content) =>
-            setNodeContent(id, content)
-          }
+          contents={contents}
+          setContents={(contents) => {
+            console.log(contents)
+            console.log(setNodeContents(id, contents))
+          }}
         />
       )}
       {inputLabels.map((label) => (
@@ -256,41 +345,42 @@ const BaseNode = ({ id }: { id: string }) => {
           Loading...
         </p>
       )}
-      {output &&
-        Object.keys(output).length > 0 &&
-        (Object.keys(output).length > 1 ? (
-          Object.keys(output).map((key) => (
+      {outputs &&
+        Object.keys(outputs).length > 0 &&
+        (Object.keys(outputs).length > 1 ? (
+          Object.keys(outputs).map((key) => (
             <div key={key} className=''>
               <h3 className='w-full mr-4 text-gray-800'>
                 {key}
               </h3>
-              {output[key]?._tag === 'imageUrl' ? (
+              {outputs[key]?._tag === 'imageUrl' ? (
                 <img
-                  src={output[key].value as string}
+                  src={outputs[key]?.value as string}
                   alt='img'
                   className='mb-3 max-w-md no-export'
                 />
               ) : (
                 <div className='text-sm text-gray-700 mb-3 max-w-md whitespace-pre-wrap'>
-                  {output[key].value.toString()}
+                  {outputs[key]?.value.toString()}
                 </div>
               )}
             </div>
           ))
-        ) : output[Object.keys(output)[0]]._tag ===
+        ) : outputs[Object.keys(outputs)[0]]?._tag ===
           'imageUrl' ? (
           <img
             src={
-              output[Object.keys(output)[0]].value as string
+              outputs[Object.keys(outputs)[0]]
+                ?.value as string
             }
             alt='img'
             className='mb-3 max-w-md no-export'
           />
         ) : (
           <div className='text-sm text-gray-700 mb-3 max-w-md whitespace-pre-wrap'>
-            {output[
-              Object.keys(output)[0]
-            ].value?.toString()}
+            {outputs[
+              Object.keys(outputs)[0]
+            ]?.value?.toString()}
           </div>
         ))}
 

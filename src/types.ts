@@ -29,21 +29,24 @@ export type DataType =
   | StringType
   | NumberType
   | ImageUrlType
+
 export type Data = StringData | NumberData | ImageUrlData
+export type Datas = Record<string, Data | null>
 export type Content = StringData | NumberData | ImageUrlData
+export type Contents = Record<string, Content | null>
 
 export type Label = DataType & {
   value: string
 }
 
 export type FunctionInput = {
-  inputs: Record<string, Data>
-  content: Record<string, Content>
+  inputs: Datas
+  contents: Contents
 }
 
 export type NodeFunc = ({
   inputs,
-  content,
+  contents,
 }: FunctionInput) => E.Either<
   Error,
   { [key: string]: Data }
@@ -51,27 +54,23 @@ export type NodeFunc = ({
 
 export type AsyncNodeFunc = ({
   inputs,
-  content,
+  contents,
 }: FunctionInput) => TE.TaskEither<
   Error,
   { [key: string]: Data }
 >
 
 export type LabelFunc = (
-  contents: Record<string, Content>
+  contents: Contents
 ) => E.Either<Error, Label[]>
 
-export type TitleFunc = (
-  contents: Record<string, Content>
-) => string
+export type TitleFunc = (contents: Contents) => string
 
-export type DescriptionFunc = (
-  contents: Record<string, Content>
-) => string
+export type DescriptionFunc = (contents: Contents) => string
 
 export type ComponentProps = {
-  content: Record<string, Content>
-  setContent: (content: Record<string, Content>) => void
+  contents: Contents
+  setContents: (content: Contents) => void
 }
 
 export type NodeConfig = {
@@ -83,10 +82,15 @@ export type NodeConfig = {
   getInputs?: LabelFunc
   outputLabels: Label[]
   getOutputs?: LabelFunc
-  output?: Record<string, Data>
-  content?: Record<string, Content>
+  outputs?: Datas
+  contents?: Contents
+  lazy?: boolean
+  componentId?: string
+}
+
+export type NodeComponent = {
+  config: NodeConfig
+  component?: React.FC<ComponentProps>
   func?: NodeFunc
   afunc?: AsyncNodeFunc
-  lazy?: boolean
-  Component?: React.FC<ComponentProps>
 }

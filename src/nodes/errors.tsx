@@ -11,6 +11,43 @@ export class NodeInputMissingError extends Error {
     new NodeInputMissingError(input)
 }
 
+export class NodeContentMissingError extends Error {
+  _tag: 'NodeContentMissingError'
+
+  constructor(content: string) {
+    super(`
+        Missing content ${content}`)
+    this._tag = 'NodeContentMissingError'
+  }
+
+  public static of = (content: string) =>
+    new NodeContentMissingError(content)
+}
+
+export class NodeComponentIdMissingError extends Error {
+  _tag: 'NodeComponentIdMissingError'
+
+  constructor() {
+    super(`Missing component id`)
+    this._tag = 'NodeComponentIdMissingError'
+  }
+
+  public static of = () => new NodeComponentIdMissingError()
+}
+
+export class NodeComponentIdNotFoundError extends Error {
+  _tag: 'NodeComponentIdNotFoundError'
+
+  constructor(id: string) {
+    super(`
+        Can't find component with id ${id} `)
+    this._tag = 'NodeComponentIdNotFoundError'
+  }
+
+  public static of = (id: string) =>
+    new NodeComponentIdNotFoundError(id)
+}
+
 export class NodeInputTypeMismatchError extends Error {
   _tag: 'NodeInputTypeMismatchError'
 
@@ -30,6 +67,31 @@ export class NodeInputTypeMismatchError extends Error {
     actual: string
   ) =>
     new NodeInputTypeMismatchError(input, expected, actual)
+}
+
+export class NodeContentTypeMismatchError extends Error {
+  _tag: 'NodeContentTypeMismatchError'
+
+  constructor(
+    content: string,
+    expected: string,
+    actual: string
+  ) {
+    super(`
+        Content ${content} type mismatch. Expected ${expected}, got ${actual}`)
+    this._tag = 'NodeContentTypeMismatchError'
+  }
+
+  public static of = (
+    content: string,
+    expected: string,
+    actual: string
+  ) =>
+    new NodeContentTypeMismatchError(
+      content,
+      expected,
+      actual
+    )
 }
 
 export class NodeAlreadyExistsError extends Error {

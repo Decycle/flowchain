@@ -5,6 +5,7 @@ import {
   FunctionInput,
   ComponentProps,
   Data,
+  NodeComponent,
 } from '../../types'
 import * as E from 'fp-ts/Either'
 
@@ -27,12 +28,20 @@ const func = ({ inputs }: FunctionInput) => {
   })
 }
 
-const OutputNode: NodeConfig = {
+const outputNodeConfig: NodeConfig = {
   title,
   description,
   inputLabels,
   outputLabels: [],
+}
+
+const outputNode: NodeComponent = {
+  config: outputNodeConfig,
   func,
 }
 
-export default OutputNode
+const nodes = {
+  output: outputNode,
+}
+
+export default nodes

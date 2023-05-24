@@ -9,8 +9,12 @@ export const appNodesLens =
 export const nodeDataLens =
   Lens.fromProp<DefaultNode>()('data')
 export const nodeOutputLens =
-  Lens.fromProp<NodeConfig>()('output')
+  Lens.fromProp<NodeConfig>()('outputs')
 export const nodeContentLens =
-  Lens.fromProp<NodeConfig>()('content')
+  Lens.fromProp<NodeConfig>()('contents')
+export const nodeInputLabelsLens =
+  Lens.fromProp<NodeConfig>()('inputLabels')
+export const nodeOutputLabelsLens =
+  Lens.fromProp<NodeConfig>()('outputLabels')
 
 export const arrayTraversal = fromTraversable(A.Traversable)

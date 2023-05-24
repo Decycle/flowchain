@@ -1,7 +1,9 @@
-import ChatGPTNode from './chatgptNode'
+import chatGPTNode from './chatgptNode'
+import promptNode from './promptNode'
 
-const nodeConfigs = {
-  chatgpt: ChatGPTNode,
+const llmNodes = {
+  ...chatGPTNode,
+  ...promptNode,
 }
 
-export default nodeConfigs
+export default llmNodes

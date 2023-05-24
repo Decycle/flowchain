@@ -5,6 +5,7 @@ import {
   StringData,
   FunctionInput,
   ImageUrlData,
+  NodeComponent,
 } from '../../types'
 import {
   NodeInputMissingError,
@@ -92,13 +93,21 @@ const afunc = ({ inputs }: FunctionInput) =>
     })
   )
 
-const DalleNode: NodeConfig = {
+const dalleNodeConfig: NodeConfig = {
   title,
   description,
   inputLabels,
   outputLabels,
-  afunc,
   lazy: true,
 }
 
-export default DalleNode
+const dalleNode: NodeComponent = {
+  config: dalleNodeConfig,
+  afunc,
+}
+
+const nodes = {
+  dalle: dalleNode,
+}
+
+export default nodes

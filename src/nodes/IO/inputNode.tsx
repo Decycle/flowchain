@@ -5,8 +5,13 @@ import {
   FunctionInput,
   ComponentProps,
   StringData,
+  Content,
+  Data,
+  NodeComponent,
 } from '../../types'
 import * as E from 'fp-ts/Either'
+import { pipe } from 'fp-ts/lib/function'
+import { NodeContentMissingError } from '../errors'
 
 const title = 'Input'
 const description =
@@ -19,18 +24,23 @@ const outputLabels: Label[] = [
   },
 ]
 
-const func = ({ content }: FunctionInput) => {
-  return E.right({
-    input: {
-      _tag: 'string',
-      value: content.output?.value,
-    } as StringData,
-  })
+const func = ({ contents }: FunctionInput) => {
+  console.log('running func', contents)
+  return pipe(
+    contents.output,
+    E.fromNullable(NodeContentMissingError.of('output')),
+    E.map((output: Content) => ({
+      input: {
+        _tag: output._tag,
+        value: output.value,
+      } as Data,
+    }))
+  )
 }
 
 const InputComponent = ({
-  content,
-  setContent,
+  contents,
+  setContents,
 }: ComponentProps) => {
   const inputTypeOptions = ['text', 'number']
   const [inputType, setInputType] = useState<
@@ -66,9 +76,9 @@ const InputComponent = ({
         <textarea
           id='inputField'
           className='w-full p-2 border border-gray-300 rounded-md nodrag'
-          value={content.output?.value}
+          value={contents.output?.value}
           onChange={(e) =>
-            setContent({
+            setContents({
               output: {
                 _tag: 'string',
                 value: e.target.value,
@@ -81,9 +91,9 @@ const InputComponent = ({
           id='inputField'
           type={inputType}
           className='w-full p-2 border border-gray-300 rounded-md nodrag'
-          value={content.output?.value}
+          value={contents.output?.value}
           onChange={(e) =>
-            setContent({
+            setContents({
               output: {
                 _tag: 'string',
                 value: e.target.value,
@@ -96,13 +106,27 @@ const InputComponent = ({
   )
 }
 
-const InputNode: NodeConfig = {
+const inputNodeConfig: NodeConfig = {
   title,
   description,
   inputLabels: [],
   outputLabels,
-  func,
-  Component: InputComponent,
+  contents: {
+    output: {
+      _tag: 'string',
+      value: '',
+    } as StringData,
+  },
 }
 
-export default InputNode
+const inputNode: NodeComponent = {
+  config: inputNodeConfig,
+  func,
+  component: InputComponent,
+}
+
+const nodes = {
+  input: inputNode,
+}
+
+export default nodes

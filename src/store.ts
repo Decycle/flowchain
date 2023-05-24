@@ -14,7 +14,13 @@ import {
 
 import 'reactflow/dist/style.css'
 import { create } from 'zustand'
-import { Content, Data, NodeConfig } from './types.ts'
+import { persist } from 'zustand/middleware'
+import {
+  Contents,
+  Datas,
+  Label,
+  NodeConfig,
+} from './types.ts'
 import { v4 as uuidv4 } from 'uuid'
 import * as O from 'fp-ts/Option'
 import * as E from 'fp-ts/Either'
@@ -23,11 +29,13 @@ import {
   EdgeNotFoundError,
   NodeNotFoundError,
 } from './nodes/errors'
-import nodeConfigs from './nodes'
+import nodeComponents from './nodes'
 import { Lens } from 'monocle-ts'
 import {
   arrayTraversal,
   nodeContentLens,
+  nodeInputLabelsLens,
+  nodeOutputLabelsLens,
   nodeOutputLens,
 } from './lens.ts'
 import { pipe } from 'fp-ts/lib/function'
@@ -41,7 +49,7 @@ export type AppValue = {
   edges: DefaultEdge[]
 }
 
-export type NodeConfigsString = keyof typeof nodeConfigs
+export type NodeConfigsString = keyof typeof nodeComponents
 
 type AppActions = {
   addNode: (
@@ -59,16 +67,26 @@ type AppActions = {
     nodeUpdate: Partial<NodeConfig>
   ) => E.Either<NodeNotFoundError, void>
 
-  setNodeOutput: (
+  setNodeOutputs: (
     nodeId: string,
-    output: Record<string, Data>,
+    outputs: Datas,
     replace?: boolean
   ) => E.Either<NodeNotFoundError, void>
 
-  setNodeContent: (
+  setNodeContents: (
     nodeId: string,
-    content: Record<string, Content>,
+    contents: Contents,
     replace?: boolean
+  ) => E.Either<NodeNotFoundError, void>
+
+  setNodeInputLabels: (
+    nodeId: string,
+    labels: Label[]
+  ) => E.Either<NodeNotFoundError, void>
+
+  setNodeOutputLabels: (
+    nodeId: string,
+    labels: Label[]
   ) => E.Either<NodeNotFoundError, void>
 
   deleteEdge: (
@@ -87,17 +105,84 @@ type AppState = AppValue & AppActions
 const initialNodes: DefaultNode[] = []
 const initialEdges: DefaultEdge[] = []
 
-const useFlowStore = create<AppState>((set, get) => ({
+const setNodeProperty = <A>(
+  nodeId: string,
+  lens: Lens<NodeConfig, A>,
+  content: A,
+  get: () => AppState,
+  set: (
+    partial: (state: AppState) => Partial<AppState>
+  ) => void,
+  replace?: boolean
+) => {
+  const nodesContentUpdate = (nodeDataOutput: A): A => {
+    //if content is object, merge with existing content
+
+    if (
+      typeof content === 'object' &&
+      !Array.isArray(content)
+    ) {
+      return {
+        ...nodeDataOutput,
+        ...content,
+      }
+    }
+    //else replace content
+    return content
+  }
+
+  const nodesContentReplace = () => content
+
+  return pipe(
+    get().nodes,
+    A.findFirst((node) => node.id === nodeId),
+    E.fromOption(() => new NodeNotFoundError(nodeId)),
+    E.chain(() => {
+      set(
+        appNodesLens
+          .composeTraversal(arrayTraversal<DefaultNode>())
+          .filter((node) => node.id === nodeId)
+          .composeLens(nodeDataLens)
+          .composeLens(lens)
+          .modify((output) =>
+            pipe(
+              output ?? ({} as A),
+              replace
+                ? nodesContentReplace
+                : nodesContentUpdate
+            )
+          )
+      )
+      return E.right(undefined)
+    })
+  )
+}
+
+const flowStore = (
+  set: (
+    partial:
+      | AppState
+      | Partial<AppState>
+      | ((state: AppState) => AppState | Partial<AppState>),
+    replace?: boolean | undefined
+  ) => void,
+  get: () => AppState
+): AppState => ({
   nodes: initialNodes,
   edges: initialEdges,
 
   addNode: (nodeType, position = { x: 0, y: 0 }) => {
     const id = uuidv4()
+    const nodeComponent = nodeComponents[nodeType]
+
     set((state) => ({
       nodes: [
         ...state.nodes,
         {
-          data: nodeConfigs[nodeType],
+          data: {
+            ...nodeComponent.config,
+            componentId: nodeType,
+          },
           position,
           id,
           type: 'baseNode',
@@ -157,75 +242,43 @@ const useFlowStore = create<AppState>((set, get) => ({
     )
   },
 
-  setNodeOutput: (nodeId, output, replace) => {
-    const nodesOutputUpdate = (
-      nodeDataOutput: Record<string, Data>
-    ): Record<string, Data> => ({
-      ...nodeDataOutput,
-      ...output,
-    })
+  setNodeOutputs: (nodeId, outputs, replace) =>
+    setNodeProperty(
+      nodeId,
+      nodeOutputLens,
+      outputs,
+      get,
+      set,
+      replace
+    ),
 
-    const nodesOutputReplace = () => output
+  setNodeContents: (nodeId, contents, replace) =>
+    setNodeProperty(
+      nodeId,
+      nodeContentLens,
+      contents,
+      get,
+      set,
+      replace
+    ),
 
-    return pipe(
-      get().nodes,
-      A.findFirst((node) => node.id === nodeId),
-      E.fromOption(() => new NodeNotFoundError(nodeId)),
-      E.chain(() => {
-        set(
-          appNodesLens
-            .composeTraversal(arrayTraversal<DefaultNode>())
-            .filter((node) => node.id === nodeId)
-            .composeLens(nodeDataLens)
-            .composeLens(nodeOutputLens)
-            .modify((output) =>
-              pipe(
-                output ?? ({} as Record<string, Data>),
-                replace
-                  ? nodesOutputReplace
-                  : nodesOutputUpdate
-              )
-            )
-        )
-        return E.right(undefined)
-      })
-    )
-  },
+  setNodeInputLabels: (nodeId, labels) =>
+    setNodeProperty(
+      nodeId,
+      nodeInputLabelsLens,
+      labels,
+      get,
+      set
+    ),
 
-  setNodeContent: (nodeId, content, replace) => {
-    const nodesContentUpdate = (
-      nodeDataOutput: Record<string, Content>
-    ): Record<string, Data> => ({
-      ...nodeDataOutput,
-      ...content,
-    })
-
-    const nodesContentReplace = () => content
-
-    return pipe(
-      get().nodes,
-      A.findFirst((node) => node.id === nodeId),
-      E.fromOption(() => new NodeNotFoundError(nodeId)),
-      E.chain(() => {
-        set(
-          appNodesLens
-            .composeTraversal(arrayTraversal<DefaultNode>())
-            .filter((node) => node.id === nodeId)
-            .composeLens(nodeDataLens)
-            .composeLens(nodeContentLens)
-            .modify((output) =>
-              pipe(
-                output ?? ({} as Record<string, Content>),
-                replace
-                  ? nodesContentReplace
-                  : nodesContentUpdate
-              )
-            )
-        )
-        return E.right(undefined)
-      })
-    )
-  },
+  setNodeOutputLabels: (nodeId, labels) =>
+    setNodeProperty(
+      nodeId,
+      nodeOutputLabelsLens,
+      labels,
+      get,
+      set
+    ),
 
   deleteEdge: (edgeId) => {
     return pipe(
@@ -278,7 +331,13 @@ const useFlowStore = create<AppState>((set, get) => ({
       }
     })
   },
-}))
+})
+
+const useFlowStore = create(
+  persist(flowStore, {
+    name: 'flow-store',
+  })
+)
 
 export type { AppState, DefaultNode }
 export default useFlowStore
