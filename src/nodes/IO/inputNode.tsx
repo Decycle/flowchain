@@ -1,16 +1,10 @@
 import { useState } from 'react'
 import {
-  NodeConfig,
-  Label,
-  FunctionInput,
+  allDataTypes,
   ComponentProps,
-  StringData,
   Content,
-  Data,
-  NodeComponent,
-  NodeFunc,
   createNode,
-  StringLabel,
+  Labels,
 } from '../../types'
 import TextareaAutosize from 'react-textarea-autosize'
 import * as E from 'fp-ts/Either'
@@ -23,10 +17,17 @@ const description =
 
 const outputLabels = [
   {
-    _tag: 'string',
+    _tag: allDataTypes,
     value: 'input',
   },
-] as const satisfies ReadonlyArray<Label>
+] as const satisfies Labels
+
+const contentLabels = [
+  {
+    _tag: allDataTypes,
+    value: 'input',
+  },
+] as const satisfies Labels
 
 const InputComponent = ({
   contents,
@@ -96,35 +97,34 @@ const InputComponent = ({
   )
 }
 
-type outputType = typeof outputLabels
-
 const nodes = {
-  input: createNode<StringLabel[], outputType>({
+  input: createNode({
     config: {
       title,
       description,
       inputLabels: [],
       outputLabels,
+      contentLabels,
       contents: {
-        output: {
-          _tag: 'string',
+        input: {
+          _tag: ['string', 'number', 'imageUrl'],
           value: '',
-        } as StringData,
+        },
       },
     },
     component: InputComponent,
     func: ({ contents }) => {
       console.log('running func', contents)
       return pipe(
-        contents.output,
+        contents.input,
         E.fromNullable(
           NodeContentMissingError.of('output')
         ),
-        E.map((output: Content) => ({
+        E.map((output) => ({
           input: {
-            _tag: output._tag,
+            _tag: ['string', 'number', 'imageUrl'],
             value: output.value,
-          },
+          } as const,
         }))
       )
     },

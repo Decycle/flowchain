@@ -1,7 +1,6 @@
 import axios from 'axios'
 import {
   NodeConfig,
-  ImageUrlData,
   NodeComponent,
   AsyncNodeFunc,
   Labels,
@@ -53,6 +52,7 @@ const nodes = {
       description,
       inputLabels,
       outputLabels,
+      contentLabels: [],
       lazy: true,
     },
     afunc: ({ inputs }) =>
@@ -89,7 +89,7 @@ const nodes = {
               _tag: 'imageUrl',
               value: response.data.data[0].url as string,
               image: 'a',
-            } as ImageUrlData,
+            } as const,
           }
           return response_data
         })

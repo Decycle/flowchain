@@ -1,6 +1,6 @@
 import { Lens } from 'monocle-ts'
 import { AppValue, DefaultNode } from './store'
-import { Data, Label, NodeConfig } from './types'
+import { Label, NodeConfig } from './types'
 import { fromTraversable } from 'monocle-ts'
 import * as A from 'fp-ts/lib/Array'
 

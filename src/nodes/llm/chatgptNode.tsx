@@ -2,7 +2,6 @@ import axios from 'axios'
 import {
   NodeConfig,
   Label,
-  StringData,
   FunctionInput,
   NodeComponent,
   AsyncNodeFunc,
@@ -57,6 +56,7 @@ const nodes = {
       description,
       inputLabels,
       outputLabels,
+      contentLabels: [],
       lazy: true,
     },
     afunc: ({ inputs }) =>
@@ -93,7 +93,7 @@ const nodes = {
               _tag: 'string',
               value: response.data.choices[0].message
                 .content as string,
-            } as StringData,
+            } as const,
           }
           console.log('response_data', response_data)
           return response_data

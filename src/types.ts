@@ -1,43 +1,14 @@
 import * as TE from 'fp-ts/TaskEither'
 import * as E from 'fp-ts/Either'
 
-export type StringType = {
-  _tag: 'string'
+type DataTypes = {
+  string: string
+  number: number
+  imageUrl: string
+  any: any
 }
 
-export type StringData = {
-  value: string
-} & StringType
-
-export type StringLabel = {
-  value: string
-} & StringType
-
-export type NumberType = {
-  _tag: 'number'
-}
-
-export type NumberData = {
-  value: number
-} & NumberType
-
-export type NumberLabel = {
-  value: string
-} & NumberType
-
-export type ImageUrlType = {
-  _tag: 'imageUrl'
-}
-
-export type ImageUrlData = {
-  value: string
-} & ImageUrlType
-
-export type ImageUrlLabel = {
-  value: string
-} & ImageUrlType
-
-export type UnionTypeTag = 'string' | 'number' | 'imageUrl'
+export type UnionTypeTag = keyof DataTypes
 export type UnionTypeTags = ReadonlyArray<UnionTypeTag>
 
 export type UnionType = {
@@ -46,120 +17,164 @@ export type UnionType = {
 
 export type UnionData<K extends UnionTypeTags> = {
   _tag: K
-  value: K[number]
+  value: DataTypes[K[number]]
 }
 
-const unionTag = ['string', 'number'] as const
+export type UnionLabel = {
+  _tag: UnionTypeTags
+  value: string
+}
 
-const a = {
-  _tag: unionTag,
-} as const satisfies Readonly<UnionType>
+export const createUnionData = <
+  const K extends UnionTypeTags
+>(
+  data: UnionData<K>
+): UnionData<K> => data
 
-const b = {
-  _tag: unionTag,
-  value: 'number',
-} as const satisfies Readonly<UnionData<typeof unionTag>>
+export type SingleType = {
+  [K in keyof DataTypes]: {
+    _tag: K
+  }
+}[keyof DataTypes]
 
-export type DataType =
-  | StringType
-  | NumberType
-  | ImageUrlType
+export type DataType = SingleType | UnionType
 
-export type Data = StringData | NumberData | ImageUrlData
+export type SingleData = {
+  [K in keyof DataTypes]: {
+    _tag: K
+    value: DataTypes[K]
+  }
+}[keyof DataTypes]
 
+export type Data = SingleData | UnionData<UnionTypeTags>
 export type Datas = Record<string, Data | null>
-export type Content = StringData | NumberData | ImageUrlData
+
+export type Content = SingleData | UnionData<UnionTypeTags>
 export type Contents = Record<string, Content | null>
 
-export type Label =
-  | StringLabel
-  | NumberLabel
-  | ImageUrlLabel
+export type SingleLabel = {
+  [K in keyof DataTypes]: {
+    _tag: K
+    value: string
+  }
+}[keyof DataTypes]
+
+export type Label = SingleLabel | UnionLabel
 export type Labels = ReadonlyArray<Label>
 
 type InferDataType<T extends DataType> =
-  T extends StringType
-    ? string
-    : T extends NumberType
-    ? number
-    : T extends ImageUrlType
-    ? string
+  T extends SingleType
+    ? DataTypes[T['_tag']]
+    : T extends UnionType
+    ? DataTypes[T['_tag'][number]]
     : never
 
-type InferLabels<T extends Labels> = {
+type InferInputLabels<T extends Labels> = {
+  [K in T[number] as K['value']]: {
+    _tag: K['_tag'] extends UnionTypeTags
+      ? K['_tag'][number] | K['_tag']
+      : K['_tag']
+    value: InferDataType<K>
+  } | null
+}
+
+type InferOutputLabels<T extends Labels> = {
   [K in T[number] as K['value']]: {
     _tag: K['_tag']
     value: InferDataType<K>
   } | null
 }
 
-export type FunctionInput<IL extends Labels> = {
-  inputs: InferLabels<IL>
-  contents: Contents
+export type FunctionInput<
+  IL extends Labels,
+  CL extends Labels
+> = {
+  inputs: InferInputLabels<IL>
+  contents: InferInputLabels<CL>
 }
 
 export type NodeFunc<
   IL extends Labels = Labels,
-  OL extends Labels = Labels
+  OL extends Labels = Labels,
+  CL extends Labels = Labels
 > = ({
   inputs,
   contents,
-}: FunctionInput<IL>) => E.Either<Error, InferLabels<OL>>
+}: FunctionInput<IL, CL>) => E.Either<
+  Error,
+  InferOutputLabels<OL>
+>
 
 export type AsyncNodeFunc<
   IL extends Labels = Labels,
-  OL extends Labels = Labels
+  OL extends Labels = Labels,
+  CL extends Labels = Labels
 > = ({
   inputs,
   contents,
-}: FunctionInput<IL>) => TE.TaskEither<
+}: FunctionInput<IL, CL>) => TE.TaskEither<
   Error,
-  InferLabels<OL>
+  InferOutputLabels<OL>
 >
 
-export type LabelFunc<T extends Labels> = (
-  contents: Contents
-) => E.Either<Error, T>
+export type LabelFunc<
+  IL extends Labels = Labels,
+  CL extends Labels = Labels
+> = (contents: InferInputLabels<CL>) => E.Either<Error, IL>
 
-export type TitleFunc = (contents: Contents) => string
+export type TitleFunc<CL extends Labels = Labels> = (
+  contents: InferInputLabels<CL>
+) => string
 
-export type DescriptionFunc = (contents: Contents) => string
+export type DescriptionFunc<CL extends Labels = Labels> = (
+  contents: InferInputLabels<CL>
+) => string
 
-export type ComponentProps = {
-  contents: Contents
-  setContents: (content: Contents) => void
+export type ComponentProps<CL extends Labels = Labels> = {
+  contents: InferInputLabels<CL>
+  setContents: (content: InferOutputLabels<CL>) => void
 }
 
 export type NodeConfig<
   IL extends Labels = Labels,
-  OL extends Labels = Labels
+  OL extends Labels = Labels,
+  CL extends Labels = Labels
 > = {
   title: string
-  getTitle?: TitleFunc
+  getTitle?: TitleFunc<CL>
   description: string
-  getDescription?: DescriptionFunc
+  getDescription?: DescriptionFunc<CL>
   inputLabels: IL
-  getInputLabels?: LabelFunc<IL>
+  getInputLabels?: LabelFunc<IL, CL>
   outputLabels: OL
-  outputs?: InferLabels<OL>
-  contents?: Contents
+  contentLabels: CL
+  outputs?: InferOutputLabels<OL>
+  contents?: InferOutputLabels<CL>
   lazy?: boolean
   componentId?: string
 }
 
 export type NodeComponent<
   IL extends Labels = Labels,
-  OL extends Labels = Labels
+  OL extends Labels = Labels,
+  CL extends Labels = Labels
 > = {
-  config: NodeConfig<IL, OL>
-  component?: React.FC<ComponentProps>
-  func?: NodeFunc<IL, OL>
-  afunc?: AsyncNodeFunc<IL, OL>
+  config: NodeConfig<IL, OL, CL>
+  component?: React.FC<ComponentProps<CL>>
+  func?: NodeFunc<IL, OL, CL>
+  afunc?: AsyncNodeFunc<IL, OL, CL>
 }
 
 export const createNode = <
-  IL extends Labels,
-  OL extends Labels
+  const IL extends Labels,
+  const OL extends Labels,
+  const CL extends Labels
 >(
-  node: NodeComponent<IL, OL>
+  node: NodeComponent<IL, OL, CL>
 ) => node
+
+export const allDataTypes = [
+  'string',
+  'number',
+  'imageUrl',
+] as const
