@@ -117,8 +117,6 @@ const App = () => {
   const rfInstance = useReactFlow()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
 
-  const { setViewport } = useReactFlow()
-
   const onDragOver = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault()

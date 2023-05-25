@@ -9,12 +9,16 @@ export const monoidObject = <K extends string, V>(): Monoid<
   empty: {} as Record<K, V>,
 })
 
-export const log = <A>(a: A): A => {
-  console.log(a)
-  return a
-}
+export const log =
+  <A>(message: string) =>
+  (a: A): A => {
+    console.log(message, a)
+    return a
+  }
 
-export const error = <A>(a: A): A => {
-  console.error(a)
-  return a
-}
+export const error =
+  <A>(message: string) =>
+  (a: A): A => {
+    console.error(message, a)
+    return a
+  }

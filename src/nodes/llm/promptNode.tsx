@@ -8,7 +8,12 @@ import {
   Content,
   Contents,
   NodeComponent,
+  Labels,
+  NodeFunc,
+  createNode,
+  StringLabel,
 } from '../../types'
+import TextareaAutosize from 'react-textarea-autosize'
 import * as E from 'fp-ts/Either'
 import * as A from 'fp-ts/Array'
 import {
@@ -20,12 +25,13 @@ import { pipe } from 'fp-ts/lib/function'
 const title = 'Prompt'
 const description =
   'A node that outputs a prompt, pass in variables with {variable}'
-const outputLabels: Label[] = [
+
+const outputLabels = [
   {
     _tag: 'string',
     value: 'prompt',
   },
-]
+] as const satisfies Labels
 
 const getInputLabels = (contents: Contents) => {
   return pipe(
@@ -54,29 +60,11 @@ const getInputLabels = (contents: Contents) => {
             ({
               _tag: 'string',
               value: label,
-            } as Label)
+            } as const satisfies Label)
         )
       )
     )
   )
-}
-
-const func = ({ inputs, contents }: FunctionInput) => {
-  let output = contents.prompt?.value.toString() ?? ''
-
-  for (const label in inputs) {
-    output = output.replace(
-      new RegExp(`{${label}}`, 'g'),
-      inputs[label]?.value.toString() ?? ''
-    )
-  }
-
-  return E.right({
-    input: {
-      _tag: 'string',
-      value: output,
-    } as StringData,
-  })
 }
 
 const PromptComponent = ({
@@ -84,7 +72,7 @@ const PromptComponent = ({
   setContents,
 }: ComponentProps) => {
   return (
-    <textarea
+    <TextareaAutosize
       value={contents.prompt?.value.toString() ?? ''}
       onChange={(e) =>
         setContents({
@@ -99,27 +87,42 @@ const PromptComponent = ({
   )
 }
 
-const promptNodeConfig: NodeConfig = {
-  title,
-  description,
-  inputLabels: [],
-  outputLabels,
-  getInputs: getInputLabels,
-  contents: {
-    prompt: {
-      _tag: 'string',
-      value: '',
-    } as StringData,
-  },
-}
-export const promptComponent: NodeComponent = {
-  config: promptNodeConfig,
-  component: PromptComponent,
-  func,
-}
+type outputType = typeof outputLabels
 
 export const nodes = {
-  prompt: promptComponent,
+  prompt: createNode<StringLabel[], outputType>({
+    config: {
+      title,
+      description,
+      inputLabels: [],
+      outputLabels,
+      getInputLabels,
+      contents: {
+        prompt: {
+          _tag: 'string',
+          value: '',
+        },
+      },
+    },
+    component: PromptComponent,
+    func: ({ inputs, contents }) => {
+      let output = contents.prompt?.value.toString() ?? ''
+
+      for (const label in inputs) {
+        output = output.replace(
+          new RegExp(`{${label}}`, 'g'),
+          inputs[label]?.value.toString() ?? ''
+        )
+      }
+
+      return E.right({
+        prompt: {
+          _tag: 'string',
+          value: output,
+        },
+      })
+    },
+  }),
 }
 
 export default nodes

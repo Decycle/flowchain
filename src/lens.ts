@@ -1,6 +1,6 @@
 import { Lens } from 'monocle-ts'
 import { AppValue, DefaultNode } from './store'
-import { Data, NodeConfig } from './types'
+import { Data, Label, NodeConfig } from './types'
 import { fromTraversable } from 'monocle-ts'
 import * as A from 'fp-ts/lib/Array'
 
@@ -9,7 +9,9 @@ export const appNodesLens =
 export const nodeDataLens =
   Lens.fromProp<DefaultNode>()('data')
 export const nodeOutputLens =
-  Lens.fromProp<NodeConfig>()('outputs')
+  Lens.fromProp<NodeConfig<ReadonlyArray<Label>>>()(
+    'outputs'
+  )
 export const nodeContentLens =
   Lens.fromProp<NodeConfig>()('contents')
 export const nodeInputLabelsLens =

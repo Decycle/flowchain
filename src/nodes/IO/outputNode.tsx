@@ -1,47 +1,45 @@
-import { useState } from 'react'
-import {
-  NodeConfig,
-  Label,
-  FunctionInput,
-  ComponentProps,
-  Data,
-  NodeComponent,
-} from '../../types'
+import { Labels, createNode } from '../../types'
 import * as E from 'fp-ts/Either'
 
 const title = 'Output'
 const description =
   'A node that receives data and marks the end of a flow'
 
-const inputLabels: Label[] = [
+const inputLabels = [
   {
     _tag: 'string',
     value: 'output',
   },
-]
+] as const satisfies Labels
 
-const func = ({ inputs }: FunctionInput) => {
-  return E.right({
-    output: {
-      ...inputs.output,
-    } as Data,
-  })
-}
-
-const outputNodeConfig: NodeConfig = {
-  title,
-  description,
-  inputLabels,
-  outputLabels: [],
-}
-
-const outputNode: NodeComponent = {
-  config: outputNodeConfig,
-  func,
-}
+const outputLabels = [
+  {
+    _tag: 'string',
+    value: 'output',
+  },
+] as const satisfies Labels
 
 const nodes = {
-  output: outputNode,
+  output: createNode({
+    func: ({ inputs }) => {
+      if (inputs.output !== null) {
+        return E.right({
+          output: {
+            ...inputs.output,
+          },
+        })
+      }
+      return E.right({
+        output: null,
+      })
+    },
+    config: {
+      title,
+      description,
+      inputLabels,
+      outputLabels,
+    },
+  }),
 }
 
 export default nodes

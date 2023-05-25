@@ -8,7 +8,11 @@ import {
   Content,
   Data,
   NodeComponent,
+  NodeFunc,
+  createNode,
+  StringLabel,
 } from '../../types'
+import TextareaAutosize from 'react-textarea-autosize'
 import * as E from 'fp-ts/Either'
 import { pipe } from 'fp-ts/lib/function'
 import { NodeContentMissingError } from '../errors'
@@ -17,26 +21,12 @@ const title = 'Input'
 const description =
   'A node that sends inputs to other nodes'
 
-const outputLabels: Label[] = [
+const outputLabels = [
   {
     _tag: 'string',
     value: 'input',
   },
-]
-
-const func = ({ contents }: FunctionInput) => {
-  console.log('running func', contents)
-  return pipe(
-    contents.output,
-    E.fromNullable(NodeContentMissingError.of('output')),
-    E.map((output: Content) => ({
-      input: {
-        _tag: output._tag,
-        value: output.value,
-      } as Data,
-    }))
-  )
-}
+] as const satisfies ReadonlyArray<Label>
 
 const InputComponent = ({
   contents,
@@ -73,7 +63,7 @@ const InputComponent = ({
         Value:
       </label>
       {inputType === 'text' ? (
-        <textarea
+        <TextareaAutosize
           id='inputField'
           className='w-full p-2 border border-gray-300 rounded-md nodrag'
           value={contents.output?.value}
@@ -106,27 +96,39 @@ const InputComponent = ({
   )
 }
 
-const inputNodeConfig: NodeConfig = {
-  title,
-  description,
-  inputLabels: [],
-  outputLabels,
-  contents: {
-    output: {
-      _tag: 'string',
-      value: '',
-    } as StringData,
-  },
-}
-
-const inputNode: NodeComponent = {
-  config: inputNodeConfig,
-  func,
-  component: InputComponent,
-}
+type outputType = typeof outputLabels
 
 const nodes = {
-  input: inputNode,
+  input: createNode<StringLabel[], outputType>({
+    config: {
+      title,
+      description,
+      inputLabels: [],
+      outputLabels,
+      contents: {
+        output: {
+          _tag: 'string',
+          value: '',
+        } as StringData,
+      },
+    },
+    component: InputComponent,
+    func: ({ contents }) => {
+      console.log('running func', contents)
+      return pipe(
+        contents.output,
+        E.fromNullable(
+          NodeContentMissingError.of('output')
+        ),
+        E.map((output: Content) => ({
+          input: {
+            _tag: output._tag,
+            value: output.value,
+          },
+        }))
+      )
+    },
+  }),
 }
 
 export default nodes

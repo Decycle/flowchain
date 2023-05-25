@@ -1,13 +1,8 @@
-import React, {
-  memo,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { useEffect, useState } from 'react'
 import { Handle, Position } from 'reactflow'
 import getHandleColor from './utils'
 import useFlowStore, { DefaultNode } from '../../store'
-import { Content, Contents, Data, Datas } from '../../types'
+import { Contents, Data, Datas } from '../../types'
 import {
   NodeComponentIdMissingError,
   NodeComponentIdNotFoundError,
@@ -38,10 +33,13 @@ const BaseNode = ({ id }: { id: string }) => {
   const getOutputs = (
     node: DefaultNode,
     handle: string | null | undefined
-  ) =>
-    node.data.outputs && handle && node.data.outputs[handle]
+  ) => {
+    return node.data.outputs &&
+      handle &&
+      node.data.outputs[handle]
       ? O.some(node.data.outputs[handle])
       : O.none
+  }
 
   const parentNodeValues: Datas = useFlowStore(
     (state) =>
@@ -104,12 +102,12 @@ const BaseNode = ({ id }: { id: string }) => {
     shallow
   )
 
-  const [getInputLabels, getOutputLabels] = pipe(
+  const [getInputLabels] = pipe(
     node,
     O.map((node) => node.data),
     O.fold(
-      () => [undefined, undefined],
-      (data) => [data.getInputs, data.getOutputs]
+      () => [undefined],
+      (data) => [data.getInputLabels]
     )
   )
 
@@ -174,27 +172,12 @@ const BaseNode = ({ id }: { id: string }) => {
         )
       )
     )
-
-    pipe(
-      getOutputLabels,
-      O.fromNullable,
-      O.map((func) =>
-        pipe(
-          func(contents),
-          E.chainW((labels) =>
-            setNodeOutputLabels(id, labels)
-          ),
-          E.mapLeft((e) => console.error(e))
-        )
-      )
-    )
   }
 
   useEffect(getLabels, [
     id,
     contents,
     getInputLabels,
-    getOutputLabels,
     setNodeInputLabels,
     setNodeOutputLabels,
   ])

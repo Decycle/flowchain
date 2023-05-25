@@ -1,15 +1,14 @@
 import axios from 'axios'
 import {
   NodeConfig,
-  Label,
-  StringData,
-  FunctionInput,
   ImageUrlData,
   NodeComponent,
+  AsyncNodeFunc,
+  Labels,
+  createNode,
 } from '../../types'
 import {
   NodeInputMissingError,
-  NodeInputTypeMismatchError,
   OpenAIChatGPTRequestError,
 } from '../errors'
 import * as TE from 'fp-ts/TaskEither'
@@ -18,19 +17,19 @@ import { log } from 'fp-ts/lib/Console'
 
 const title = 'OpenAI DALLE'
 const description = 'A node that connects to OpenAi DALLE-2'
-const inputLabels: Label[] = [
+const inputLabels = [
   {
     _tag: 'string',
     value: 'input_prompt',
   },
-]
+] as const satisfies Labels
 
-const outputLabels: Label[] = [
+const outputLabels = [
   {
     _tag: 'imageUrl',
     value: 'image',
   },
-]
+] as const satisfies Labels
 
 const open_ai_key =
   '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'
@@ -47,67 +46,55 @@ const getRequest = (prompt: string) => ({
   prompt,
 })
 
-const afunc = ({ inputs }: FunctionInput) =>
-  pipe(
-    inputs.input_prompt,
-    TE.fromNullable(
-      NodeInputMissingError.of('input_prompt')
-    ),
-    TE.chainW((input_prompt) =>
-      input_prompt._tag === 'string'
-        ? TE.right(input_prompt.value)
-        : TE.left(
-            NodeInputTypeMismatchError.of(
-              'input_prompt',
-              'string',
-              input_prompt._tag
-            )
-          )
-    ),
-    TE.map(getRequest),
-    TE.chainFirstW(
-      flow(
-        (requestData) =>
-          `Chatgpt Request: ${JSON.stringify(requestData)}`,
-        log,
-        TE.fromIO
-      )
-    ),
-    TE.chainW((requestData) =>
-      TE.tryCatch(
-        () =>
-          axios.post(openai_url, requestData, { headers }),
-        (reason) =>
-          OpenAIChatGPTRequestError.of(String(reason))
-      )
-    ),
-    TE.map((response) => {
-      const response_data = {
-        model_response: {
-          _tag: 'imageUrl',
-          value: response.data.data[0].url as string,
-        } as ImageUrlData,
-      }
-      console.log('response_data', response_data)
-      return response_data
-    })
-  )
-
-const dalleNodeConfig: NodeConfig = {
-  title,
-  description,
-  inputLabels,
-  outputLabels,
-  lazy: true,
-}
-
-const dalleNode: NodeComponent = {
-  config: dalleNodeConfig,
-  afunc,
-}
-
 const nodes = {
-  dalle: dalleNode,
+  dalle: createNode({
+    config: {
+      title,
+      description,
+      inputLabels,
+      outputLabels,
+      lazy: true,
+    },
+    afunc: ({ inputs }) =>
+      pipe(
+        inputs.input_prompt,
+        TE.fromNullable(
+          NodeInputMissingError.of('input_prompt')
+        ),
+        TE.map((input_prompt) => input_prompt.value),
+        TE.map(getRequest),
+        TE.chainFirstW(
+          flow(
+            (requestData) =>
+              `Chatgpt Request: ${JSON.stringify(
+                requestData
+              )}`,
+            log,
+            TE.fromIO
+          )
+        ),
+        TE.chainW((requestData) =>
+          TE.tryCatch(
+            () =>
+              axios.post(openai_url, requestData, {
+                headers,
+              }),
+            (reason) =>
+              OpenAIChatGPTRequestError.of(String(reason))
+          )
+        ),
+        TE.map((response) => {
+          const response_data = {
+            image: {
+              _tag: 'imageUrl',
+              value: response.data.data[0].url as string,
+              image: 'a',
+            } as ImageUrlData,
+          }
+          return response_data
+        })
+      ),
+  }),
 }
 
 export default nodes

@@ -3,7 +3,7 @@ export class NodeInputMissingError extends Error {
 
   constructor(input: string) {
     super(`
-        Missing input ${input}`)
+        Missing input: ${input}`)
     this._tag = 'NodeInputMissingError'
   }
 
