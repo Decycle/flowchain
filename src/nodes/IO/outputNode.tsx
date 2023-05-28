@@ -23,6 +23,8 @@ const outputLabels = [
   },
 ] as const satisfies Labels
 
+const contentLabels = [] as const satisfies Labels
+
 const nodes = {
   output: createNode({
     config: {
@@ -30,7 +32,7 @@ const nodes = {
       description,
       inputLabels,
       outputLabels,
-      contentLabels: [],
+      contentLabels,
     },
     func: ({ inputs }) => {
       if (inputs.output !== null) {

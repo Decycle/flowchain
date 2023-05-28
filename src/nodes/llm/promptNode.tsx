@@ -20,6 +20,11 @@ const title = 'Prompt'
 const description =
   'A node that outputs a prompt, pass in variables with {variable}'
 
+const inputLabels: ReadonlyArray<{
+  _tag: 'string'
+  value: string
+}> = [] as const
+
 const outputLabels = [
   {
     _tag: 'string',
@@ -34,16 +39,11 @@ const contentLabels = [
   },
 ] as const satisfies Labels
 
-type inputLabel = {
-  _tag: 'string'
-  value: string
-}
-
 const promptNode = createNode({
   config: {
     title,
     description,
-    inputLabels: [],
+    inputLabels,
     outputLabels,
     contentLabels,
     contents: {
@@ -76,10 +76,7 @@ const promptNode = createNode({
       )
     },
   },
-  component: ({
-    contents,
-    setContents,
-  }: ComponentProps) => {
+  Component: ({ contents, setContents }) => {
     return (
       <TextareaAutosize
         value={contents.prompt?.value.toString() ?? ''}

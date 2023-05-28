@@ -94,9 +94,9 @@ export type FunctionInput<
 }
 
 export type NodeFunc<
-  IL extends Labels = Labels,
-  OL extends Labels = Labels,
-  CL extends Labels = Labels
+  IL extends Labels,
+  OL extends Labels,
+  CL extends Labels
 > = ({
   inputs,
   contents,
@@ -106,9 +106,9 @@ export type NodeFunc<
 >
 
 export type AsyncNodeFunc<
-  IL extends Labels = Labels,
-  OL extends Labels = Labels,
-  CL extends Labels = Labels
+  IL extends Labels,
+  OL extends Labels,
+  CL extends Labels
 > = ({
   inputs,
   contents,
@@ -118,27 +118,27 @@ export type AsyncNodeFunc<
 >
 
 export type LabelFunc<
-  IL extends Labels = Labels,
-  CL extends Labels = Labels
+  IL extends Labels,
+  CL extends Labels
 > = (contents: InferInputLabels<CL>) => E.Either<Error, IL>
 
-export type TitleFunc<CL extends Labels = Labels> = (
+export type TitleFunc<CL extends Labels> = (
   contents: InferInputLabels<CL>
 ) => string
 
-export type DescriptionFunc<CL extends Labels = Labels> = (
+export type DescriptionFunc<CL extends Labels> = (
   contents: InferInputLabels<CL>
 ) => string
 
-export type ComponentProps<CL extends Labels = Labels> = {
+export type ComponentProps<CL extends Labels> = {
   contents: InferInputLabels<CL>
   setContents: (content: InferOutputLabels<CL>) => void
 }
 
 export type NodeConfig<
-  IL extends Labels = Labels,
-  OL extends Labels = Labels,
-  CL extends Labels = Labels
+  IL extends Labels,
+  OL extends Labels,
+  CL extends Labels
 > = {
   title: string
   getTitle?: TitleFunc<CL>
@@ -155,12 +155,12 @@ export type NodeConfig<
 }
 
 export type NodeComponent<
-  IL extends Labels = Labels,
-  OL extends Labels = Labels,
-  CL extends Labels = Labels
+  IL extends Labels,
+  OL extends Labels,
+  CL extends Labels
 > = {
   config: NodeConfig<IL, OL, CL>
-  component?: React.FC<ComponentProps<CL>>
+  Component?: React.FC<ComponentProps<CL>>
   func?: NodeFunc<IL, OL, CL>
   afunc?: AsyncNodeFunc<IL, OL, CL>
 }
@@ -172,6 +172,17 @@ export const createNode = <
 >(
   node: NodeComponent<IL, OL, CL>
 ) => node
+
+export type AnyNodeComponentType = NodeComponent<
+  Labels,
+  Labels,
+  Labels
+>
+export type AnyNodeConfigType = NodeConfig<
+  Labels,
+  Labels,
+  Labels
+>
 
 export const allDataTypes = [
   'string',

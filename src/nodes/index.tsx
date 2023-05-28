@@ -8,4 +8,9 @@ const nodeComponents = {
   ...imageNodes,
 }
 
+export type AllNodeComponentType = typeof nodeComponents
+export type AllNodeConfigType = {
+  [K in keyof AllNodeComponentType]: AllNodeComponentType[K]['config']
+}[keyof AllNodeComponentType]
+
 export default nodeComponents

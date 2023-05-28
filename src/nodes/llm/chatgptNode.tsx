@@ -33,6 +33,8 @@ const outputLabels = [
   },
 ] as const satisfies Labels
 
+const contentLabels = [] as const satisfies Labels
+
 const open_ai_key =
   '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'
 
@@ -56,7 +58,7 @@ const nodes = {
       description,
       inputLabels,
       outputLabels,
-      contentLabels: [],
+      contentLabels,
       lazy: true,
     },
     afunc: ({ inputs }) =>

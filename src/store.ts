@@ -18,8 +18,8 @@ import { persist } from 'zustand/middleware'
 import {
   Contents,
   Datas,
-  Label,
-  NodeConfig,
+  Labels,
+  AnyNodeConfigType,
 } from './types.ts'
 import { v4 as uuidv4 } from 'uuid'
 import * as O from 'fp-ts/Option'
@@ -41,7 +41,7 @@ import {
 import { pipe } from 'fp-ts/lib/function'
 import { nodeDataLens, appNodesLens } from './lens.ts'
 
-type DefaultNode = Node<NodeConfig>
+type DefaultNode = Node<AnyNodeConfigType>
 type DefaultEdge = Edge
 
 export type AppValue = {
@@ -64,7 +64,7 @@ type AppActions = {
 
   updateNode: (
     nodeId: string,
-    nodeUpdate: Partial<NodeConfig>
+    nodeUpdate: Partial<AnyNodeConfigType>
   ) => E.Either<NodeNotFoundError, void>
 
   setNodeOutputs: (
@@ -81,12 +81,12 @@ type AppActions = {
 
   setNodeInputLabels: (
     nodeId: string,
-    labels: Label[]
+    labels: Labels
   ) => E.Either<NodeNotFoundError, void>
 
   setNodeOutputLabels: (
     nodeId: string,
-    labels: Label[]
+    labels: Labels
   ) => E.Either<NodeNotFoundError, void>
 
   deleteEdge: (
@@ -100,14 +100,14 @@ type AppActions = {
   onConnect: OnConnect
 }
 
-type AppState = AppValue & AppActions
+type AppState = AppValue & AppActions // ^?
 
 const initialNodes: DefaultNode[] = []
 const initialEdges: DefaultEdge[] = []
 
 const setNodeProperty = <A>(
   nodeId: string,
-  lens: Lens<NodeConfig, A>,
+  lens: Lens<AnyNodeConfigType, A>,
   content: A,
   get: () => AppState,
   set: (
@@ -125,7 +125,7 @@ const setNodeProperty = <A>(
       return {
         ...nodeDataOutput,
         ...content,
-      }
+      } as A
     }
     //else replace content
     return content
@@ -220,7 +220,9 @@ const flowStore = (
   },
 
   updateNode: (nodeId, nodeUpdate) => {
-    const nodesUpdate = (nodeData: NodeConfig) => ({
+    const nodesUpdate = (
+      nodeData: AnyNodeConfigType
+    ): AnyNodeConfigType => ({
       ...nodeData,
       ...nodeUpdate,
     })

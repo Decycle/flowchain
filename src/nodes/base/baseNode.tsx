@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react'
 import { Handle, Position } from 'reactflow'
 import getHandleColor from './utils'
 import useFlowStore, { DefaultNode } from '../../store'
-import { Contents, Data, Datas } from '../../types'
+import {
+  AnyNodeComponentType,
+  Contents,
+  Data,
+  Datas,
+} from '../../types'
 import {
   NodeComponentIdMissingError,
   NodeComponentIdNotFoundError,
@@ -127,9 +132,18 @@ const BaseNode = ({ id }: { id: string }) => {
           (componentId) =>
             NodeComponentIdNotFoundError.of(componentId)
         ),
-        E.map((componentId) => nodeComponents[componentId])
+        E.map(
+          (componentId): AnyNodeComponentType =>
+            nodeComponents[componentId]
+        )
       )
     ),
+    E.chain((component) => {
+      return E.right(component)
+      parentNodeValues[0]?._tag
+      component.config.inputLabels[0]._tag
+      component.func
+    }),
     E.match(
       (e) => {
         console.error(e)
@@ -138,7 +152,7 @@ const BaseNode = ({ id }: { id: string }) => {
       (component) => [
         component.func,
         component.afunc,
-        component.component,
+        component.Component,
       ]
     )
   )
@@ -203,6 +217,7 @@ const BaseNode = ({ id }: { id: string }) => {
           console.log('func', func)
           return func
         },
+        // if function exists
         O.fromNullable,
         O.chain((func) =>
           pipe(
