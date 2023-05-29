@@ -1,24 +1,30 @@
-import {
-  Labels,
-  allDataTypes,
-  createNode,
-} from '../../types'
+import { Label, Labels, createNode } from '../../types'
 import * as E from 'fp-ts/Either'
 
 const title = 'Output'
 const description =
   'A node that receives data and marks the end of a flow'
 
-const inputLabels = [
+const inputLabels: readonly [
   {
-    _tag: allDataTypes,
+    _tag: 'string' | 'number' | 'imageUrl'
+    value: 'output'
+  }
+] = [
+  {
+    _tag: 'string',
     value: 'output',
   },
 ] as const satisfies Labels
 
-const outputLabels = [
+const outputLabels: readonly [
   {
-    _tag: allDataTypes,
+    _tag: 'string' | 'number' | 'imageUrl'
+    value: 'output'
+  }
+] = [
+  {
+    _tag: 'string',
     value: 'output',
   },
 ] as const satisfies Labels
@@ -35,16 +41,19 @@ const nodes = {
       contentLabels,
     },
     func: ({ inputs }) => {
-      if (inputs.output !== null) {
+      if (inputs.output !== undefined) {
+        console.log('outputNode', inputs.output)
         return E.right({
           output: {
-            _tag: allDataTypes,
-            value: inputs.output.value,
+            ...inputs.output,
           },
         })
       }
       return E.right({
-        output: null,
+        output: {
+          _tag: 'string',
+          value: '',
+        } as const satisfies Label,
       })
     },
   }),

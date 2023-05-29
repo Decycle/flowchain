@@ -6,13 +6,17 @@ import {
   AnyNodeComponentType,
   Contents,
   Data,
+  DataTypeMappings,
   Datas,
+  Labels,
 } from '../../types'
 import {
   NodeComponentIdMissingError,
   NodeComponentIdNotFoundError,
+  NodeInputTypeMismatchError,
   NodeNotFoundError,
-} from '../errors'
+  ValueConversionError,
+} from '../../errors'
 import { flow, pipe } from 'fp-ts/lib/function'
 import * as E from 'fp-ts/lib/Either'
 import * as T from 'fp-ts/lib/Task'
@@ -23,6 +27,8 @@ import { log, monoidObject } from '../../fp-ts-utils'
 import { sequenceT } from 'fp-ts/lib/Apply'
 import { shallow } from 'zustand/shallow'
 import nodeComponents from '..'
+import convert from '../../data_type_convert'
+import deepEqual from 'deep-equal'
 
 const BaseNode = ({ id }: { id: string }) => {
   const node = pipe(
@@ -45,34 +51,6 @@ const BaseNode = ({ id }: { id: string }) => {
       ? O.some(node.data.outputs[handle])
       : O.none
   }
-
-  const parentNodeValues: Datas = useFlowStore(
-    (state) =>
-      pipe(
-        state.getEdges(),
-        A.filter((edge) => edge.target === id),
-        A.map((edge) =>
-          pipe(
-            sequenceT(O.Applicative)(
-              O.fromNullable(edge.targetHandle),
-              pipe(
-                state.getNode(edge.source),
-                O.chain((node) =>
-                  getOutputs(node, edge.sourceHandle)
-                )
-              )
-            )
-          )
-        ),
-        A.filterMap((tuple) => tuple),
-        A.foldMap(monoidObject<string, Data | null>())(
-          ([handle, value]) => ({
-            [handle]: value,
-          })
-        )
-      ),
-    shallow
-  )
 
   const [
     title,
@@ -97,6 +75,71 @@ const BaseNode = ({ id }: { id: string }) => {
     )
   )
 
+  const convertValues = (
+    values: Datas,
+    labels: Labels
+  ): E.Either<ValueConversionError, Datas> => {
+    const newValues = { ...values }
+
+    for (const label of labels) {
+      if (
+        Object.keys(values).includes(label.value) &&
+        values[label.value] !== undefined
+      ) {
+        const value = values[label.value] as Data
+        if (label._tag != value._tag) {
+          const newValue = convert(
+            value.value,
+            value._tag,
+            label._tag
+          )
+          if (E.isLeft(newValue)) {
+            return newValue
+          }
+          newValues[label.value] = {
+            _tag: label._tag,
+            value: newValue.right,
+          } as Data
+        }
+      }
+    }
+
+    return E.right(newValues)
+  }
+
+  const parentNodeValues: Datas = useFlowStore(
+    (state) =>
+      pipe(
+        state.getEdges(),
+        A.filter((edge) => edge.target === id),
+        A.map((edge) =>
+          pipe(
+            sequenceT(O.Applicative)(
+              O.fromNullable(edge.targetHandle),
+              pipe(
+                state.getNode(edge.source),
+                O.chain((node) =>
+                  getOutputs(node, edge.sourceHandle)
+                )
+              )
+            )
+          )
+        ),
+        A.filterMap((tuple) => tuple),
+        A.foldMap(monoidObject<string, Data | undefined>())(
+          ([handle, value]) => ({
+            [handle]: value,
+          })
+        ),
+        (values) => convertValues(values, inputLabels),
+        E.getOrElseW((e) => {
+          console.error(e)
+          return {}
+        })
+      ),
+    deepEqual
+  )
+
   const contents = useFlowStore(
     (state) =>
       pipe(
@@ -104,19 +147,10 @@ const BaseNode = ({ id }: { id: string }) => {
         O.map((node) => node.data.contents ?? {}),
         O.getOrElse(() => ({} as Contents))
       ),
-    shallow
+    deepEqual
   )
 
-  const [getInputLabels] = pipe(
-    node,
-    O.map((node) => node.data),
-    O.fold(
-      () => [undefined],
-      (data) => [data.getInputLabels]
-    )
-  )
-
-  const [func, afunc, Component] = pipe(
+  const [func, afunc, getInputLabels, Component] = pipe(
     node,
     O.chain((node) =>
       pipe(node.data.componentId, O.fromNullable)
@@ -138,20 +172,15 @@ const BaseNode = ({ id }: { id: string }) => {
         )
       )
     ),
-    E.chain((component) => {
-      return E.right(component)
-      parentNodeValues[0]?._tag
-      component.config.inputLabels[0]._tag
-      component.func
-    }),
     E.match(
       (e) => {
-        console.error(e)
-        return [undefined, undefined, undefined]
+        console.error(title, e)
+        return [undefined, undefined, undefined, undefined]
       },
       (component) => [
         component.func,
         component.afunc,
+        component.getInputLabels,
         component.Component,
       ]
     )
@@ -170,6 +199,7 @@ const BaseNode = ({ id }: { id: string }) => {
   ])
 
   const [buttonClicked, setButtonClicked] = useState(false)
+  const [showOutput, setShowOutput] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
 
   const getLabels = () => {
@@ -178,7 +208,7 @@ const BaseNode = ({ id }: { id: string }) => {
       O.fromNullable,
       O.map((func) =>
         pipe(
-          func(contents),
+          func({ contents, inputs: parentNodeValues }),
           E.chainW((labels) =>
             setNodeInputLabels(id, labels)
           ),
@@ -191,6 +221,7 @@ const BaseNode = ({ id }: { id: string }) => {
   useEffect(getLabels, [
     id,
     contents,
+    parentNodeValues,
     getInputLabels,
     setNodeInputLabels,
     setNodeOutputLabels,
@@ -321,6 +352,7 @@ const BaseNode = ({ id }: { id: string }) => {
             console.log(contents)
             console.log(setNodeContents(id, contents))
           }}
+          outputs={outputs}
         />
       )}
       {inputLabels.map((label) => (
@@ -343,7 +375,22 @@ const BaseNode = ({ id }: { id: string }) => {
           Loading...
         </p>
       )}
+
+      <button
+        className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-auto nodrag mb-2'
+        onClick={() => setShowOutput(!showOutput)}>
+        {showOutput ? 'Hide' : 'Show'} Output
+      </button>
+
+      {lazy && (
+        <button
+          className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-auto nodrag mb-2'
+          onClick={() => setButtonClicked(true)}>
+          Update
+        </button>
+      )}
       {outputs &&
+        showOutput &&
         Object.keys(outputs).length > 0 &&
         (Object.keys(outputs).length > 1 ? (
           Object.keys(outputs).map((key) => (
@@ -355,11 +402,11 @@ const BaseNode = ({ id }: { id: string }) => {
                 <img
                   src={outputs[key]?.value as string}
                   alt='img'
-                  className='mb-3 max-w-md no-export'
+                  className='mb-3 max-w-md max-h-96 no-export'
                 />
               ) : (
-                <div className='text-sm text-gray-700 mb-3 max-w-md whitespace-pre-wrap'>
-                  {outputs[key]?.value.toString()}
+                <div className='text-sm max-h-96 text-gray-700 mb-3 max-w-md whitespace-pre-wrap overflow-ellipsis'>
+                  {'hello'}
                 </div>
               )}
             </div>
@@ -372,23 +419,29 @@ const BaseNode = ({ id }: { id: string }) => {
                 ?.value as string
             }
             alt='img'
-            className='mb-3 max-w-md no-export'
+            className='mb-3 max-w-md max-h-96 no-export'
           />
         ) : (
-          <div className='text-sm text-gray-700 mb-3 max-w-md whitespace-pre-wrap'>
+          <div
+            className='text-sm text-gray-700 mb-3 max-w-md whitespace-pre-wrap overflow-hidden nodrag'
+            style={{
+              maxHeight: '72rem',
+            }}
+            onClick={() => {
+              const value = outputs[Object.keys(outputs)[0]]
+
+              if (value !== undefined) {
+                navigator.clipboard.writeText(
+                  value.value.toString()
+                )
+              }
+              console.log('copied')
+            }}>
             {outputs[
               Object.keys(outputs)[0]
             ]?.value?.toString()}
           </div>
         ))}
-
-      {lazy && (
-        <button
-          className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-auto nodrag'
-          onClick={() => setButtonClicked(true)}>
-          Update
-        </button>
-      )}
     </div>
   )
 }

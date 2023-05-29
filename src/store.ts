@@ -13,8 +13,9 @@ import {
 } from 'reactflow'
 
 import 'reactflow/dist/style.css'
-import { create } from 'zustand'
+import { create, useStore } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { TemporalState, temporal } from 'zundo'
 import {
   Contents,
   Datas,
@@ -28,7 +29,7 @@ import * as A from 'fp-ts/Array'
 import {
   EdgeNotFoundError,
   NodeNotFoundError,
-} from './nodes/errors'
+} from './errors.tsx'
 import nodeComponents from './nodes'
 import { Lens } from 'monocle-ts'
 import {
@@ -336,10 +337,18 @@ const flowStore = (
 })
 
 const useFlowStore = create(
-  persist(flowStore, {
-    name: 'flow-store',
-  })
+  temporal(
+    persist(flowStore, {
+      name: 'flow-store',
+    })
+  )
 )
 
+const useTemporalStore = <T>(
+  selector: (state: TemporalState<AppState>) => T,
+  equality?: (a: T, b: T) => boolean
+) => useStore(useFlowStore.temporal, selector, equality)
+
 export type { AppState, DefaultNode }
+export { useTemporalStore }
 export default useFlowStore

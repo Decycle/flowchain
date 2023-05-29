@@ -9,7 +9,7 @@ import {
 import {
   NodeInputMissingError,
   OpenAIChatGPTRequestError,
-} from '../errors'
+} from '../../errors'
 import * as TE from 'fp-ts/TaskEither'
 import { flow, pipe } from 'fp-ts/lib/function'
 import { log } from 'fp-ts/lib/Console'

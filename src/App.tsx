@@ -25,11 +25,15 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import nodeTypes from './nodes'
 
-import useFlowStore, { AppState } from './store'
+import useFlowStore, {
+  AppState,
+  useTemporalStore,
+} from './store'
 import { shallow } from 'zustand/shallow'
 import SideBar from './sidebar'
 import { toSvg } from 'html-to-image'
 import {
+  ArchiveBoxArrowDownIcon,
   ArrowDownTrayIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -91,6 +95,33 @@ const DownloadButton = () => {
   )
 }
 
+const DownloadStateButton = () => {
+  const states = useFlowStore.getState()
+
+  const exportState = async () => {
+    return JSON.stringify(states, null, 2)
+  }
+
+  return (
+    <ControlButton
+      onClick={async () => {
+        const state = await exportState()
+        const link = document.body.appendChild(
+          document.createElement('a')
+        )
+        link.download = 'flow.json'
+        link.href =
+          'data:text/json;charset=utf-8,' +
+          encodeURIComponent(state)
+        link.click()
+        link.remove()
+      }}
+      className='border-1 border-blue-500 rounded-md p-2'>
+      <ArchiveBoxArrowDownIcon />
+    </ControlButton>
+  )
+}
+
 const selector = (state: AppState) => ({
   nodes: state.nodes,
   edges: state.edges,
@@ -116,6 +147,10 @@ const App = () => {
 
   const rfInstance = useReactFlow()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
+
+  const { undo, redo, clear } = useTemporalStore(
+    (state) => state
+  )
 
   const onDragOver = useCallback(
     (event: React.DragEvent) => {
@@ -190,6 +225,7 @@ const App = () => {
               )}
             </ControlButton>
             <DownloadButton />
+            <DownloadStateButton />
           </Controls>
           <MiniMap />
           <Background

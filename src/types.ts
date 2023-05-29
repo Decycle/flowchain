@@ -1,96 +1,55 @@
 import * as TE from 'fp-ts/TaskEither'
 import * as E from 'fp-ts/Either'
 
-type DataTypes = {
+export type DataTypeMappings = {
   string: string
   number: number
   imageUrl: string
-  any: any
 }
 
-export type UnionTypeTag = keyof DataTypes
-export type UnionTypeTags = ReadonlyArray<UnionTypeTag>
-
-export type UnionType = {
-  _tag: UnionTypeTags
-}
-
-export type UnionData<K extends UnionTypeTags> = {
-  _tag: K
-  value: DataTypes[K[number]]
-}
-
-export type UnionLabel = {
-  _tag: UnionTypeTags
-  value: string
-}
-
-export const createUnionData = <
-  const K extends UnionTypeTags
->(
-  data: UnionData<K>
-): UnionData<K> => data
-
-export type SingleType = {
-  [K in keyof DataTypes]: {
+export type DataType = {
+  [K in keyof DataTypeMappings]: {
     _tag: K
   }
-}[keyof DataTypes]
+}[keyof DataTypeMappings]
 
-export type DataType = SingleType | UnionType
-
-export type SingleData = {
-  [K in keyof DataTypes]: {
+export type Data = {
+  [K in keyof DataTypeMappings]: {
     _tag: K
-    value: DataTypes[K]
+    value: DataTypeMappings[K]
   }
-}[keyof DataTypes]
+}[keyof DataTypeMappings]
 
-export type Data = SingleData | UnionData<UnionTypeTags>
-export type Datas = Record<string, Data | null>
+export type Datas = Record<string, Data | undefined>
 
-export type Content = SingleData | UnionData<UnionTypeTags>
-export type Contents = Record<string, Content | null>
+export type Content = Data
+export type Contents = Record<string, Content | undefined>
 
-export type SingleLabel = {
-  [K in keyof DataTypes]: {
+export type Label = {
+  [K in keyof DataTypeMappings]: {
     _tag: K
     value: string
   }
-}[keyof DataTypes]
+}[keyof DataTypeMappings]
 
-export type Label = SingleLabel | UnionLabel
 export type Labels = ReadonlyArray<Label>
 
-type InferDataType<T extends DataType> =
-  T extends SingleType
-    ? DataTypes[T['_tag']]
-    : T extends UnionType
-    ? DataTypes[T['_tag'][number]]
+type InferLabels<T extends Labels> = {
+  [K in T[number] as K['value']]: K extends {
+    _tag: infer M
+  }
+    ? M extends keyof DataTypeMappings
+      ? { _tag: M; value: DataTypeMappings[M] } | undefined
+      : never
     : never
-
-type InferInputLabels<T extends Labels> = {
-  [K in T[number] as K['value']]: {
-    _tag: K['_tag'] extends UnionTypeTags
-      ? K['_tag'][number] | K['_tag']
-      : K['_tag']
-    value: InferDataType<K>
-  } | null
-}
-
-type InferOutputLabels<T extends Labels> = {
-  [K in T[number] as K['value']]: {
-    _tag: K['_tag']
-    value: InferDataType<K>
-  } | null
 }
 
 export type FunctionInput<
   IL extends Labels,
   CL extends Labels
 > = {
-  inputs: InferInputLabels<IL>
-  contents: InferInputLabels<CL>
+  inputs: InferLabels<IL>
+  contents: InferLabels<CL>
 }
 
 export type NodeFunc<
@@ -102,7 +61,7 @@ export type NodeFunc<
   contents,
 }: FunctionInput<IL, CL>) => E.Either<
   Error,
-  InferOutputLabels<OL>
+  InferLabels<OL>
 >
 
 export type AsyncNodeFunc<
@@ -114,25 +73,35 @@ export type AsyncNodeFunc<
   contents,
 }: FunctionInput<IL, CL>) => TE.TaskEither<
   Error,
-  InferOutputLabels<OL>
+  InferLabels<OL>
 >
 
 export type LabelFunc<
   IL extends Labels,
   CL extends Labels
-> = (contents: InferInputLabels<CL>) => E.Either<Error, IL>
+> = ({
+  inputs,
+  contents,
+}: {
+  inputs: InferLabels<IL>
+  contents: InferLabels<CL>
+}) => E.Either<Error, IL>
 
 export type TitleFunc<CL extends Labels> = (
-  contents: InferInputLabels<CL>
+  contents: InferLabels<CL>
 ) => string
 
 export type DescriptionFunc<CL extends Labels> = (
-  contents: InferInputLabels<CL>
+  contents: InferLabels<CL>
 ) => string
 
-export type ComponentProps<CL extends Labels> = {
-  contents: InferInputLabels<CL>
-  setContents: (content: InferOutputLabels<CL>) => void
+export type ComponentProps<
+  OL extends Labels,
+  CL extends Labels
+> = {
+  contents: InferLabels<CL>
+  setContents: (content: InferLabels<CL>) => void
+  outputs: InferLabels<OL>
 }
 
 export type NodeConfig<
@@ -141,15 +110,12 @@ export type NodeConfig<
   CL extends Labels
 > = {
   title: string
-  getTitle?: TitleFunc<CL>
   description: string
-  getDescription?: DescriptionFunc<CL>
   inputLabels: IL
-  getInputLabels?: LabelFunc<IL, CL>
   outputLabels: OL
   contentLabels: CL
-  outputs?: InferOutputLabels<OL>
-  contents?: InferOutputLabels<CL>
+  outputs?: InferLabels<OL>
+  contents?: InferLabels<CL>
   lazy?: boolean
   componentId?: string
 }
@@ -160,9 +126,12 @@ export type NodeComponent<
   CL extends Labels
 > = {
   config: NodeConfig<IL, OL, CL>
-  Component?: React.FC<ComponentProps<CL>>
+  Component?: React.FC<ComponentProps<OL, CL>>
   func?: NodeFunc<IL, OL, CL>
   afunc?: AsyncNodeFunc<IL, OL, CL>
+  getTitle?: TitleFunc<CL>
+  getDescription?: DescriptionFunc<CL>
+  getInputLabels?: LabelFunc<IL, CL>
 }
 
 export const createNode = <
@@ -183,9 +152,3 @@ export type AnyNodeConfigType = NodeConfig<
   Labels,
   Labels
 >
-
-export const allDataTypes = [
-  'string',
-  'number',
-  'imageUrl',
-] as const

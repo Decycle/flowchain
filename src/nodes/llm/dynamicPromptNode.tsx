@@ -15,15 +15,21 @@ import {
   NodeContentTypeMismatchError,
 } from '../../errors'
 import { pipe } from 'fp-ts/lib/function'
+import { useState } from 'react'
 
-const title = 'Prompt'
+const title = 'Dynamic Prompt'
 const description =
-  'A node that outputs a prompt, pass in variables with {variable}'
+  'A node that fills up a prompt, pass in variables with {variable}'
 
 const inputLabels: ReadonlyArray<{
   _tag: 'string'
   value: string
-}> = [] as const
+}> = [
+  {
+    _tag: 'string',
+    value: 'raw_prompt',
+  },
+] as const satisfies Labels
 
 const outputLabels = [
   {
@@ -35,42 +41,20 @@ const outputLabels = [
 const contentLabels = [
   {
     _tag: 'string',
-    value: 'prompt',
+    value: 'prompt_inputs',
   },
 ] as const satisfies Labels
 
-const promptNode = createNode({
+const dynamicPromptNode = createNode({
   config: {
     title,
     description,
     inputLabels,
     outputLabels,
     contentLabels,
-    contents: {
-      prompt: {
-        _tag: 'string',
-        value: '',
-      },
-    },
   },
-  Component: ({ contents, setContents }) => {
-    return (
-      <TextareaAutosize
-        value={contents.prompt?.value.toString() ?? ''}
-        onChange={(e) =>
-          setContents({
-            prompt: {
-              _tag: 'string',
-              value: e.target.value,
-            },
-          })
-        }
-        className='w-full p-2 border border-gray-300 rounded-md mb-4 nodrag'
-      />
-    )
-  },
-  func: ({ inputs, contents }) => {
-    let output = contents.prompt?.value ?? ''
+  func: ({ inputs }) => {
+    let output = inputs.raw_prompt?.value ?? ''
 
     for (const label in inputs) {
       output = output.replace(
@@ -86,16 +70,20 @@ const promptNode = createNode({
       } as const,
     })
   },
-  getInputLabels: ({ contents }) => {
+
+  getInputLabels: ({ inputs }) => {
     return pipe(
-      contents.prompt,
-      E.fromNullable(NodeContentMissingError.of('prompt')),
+      inputs.raw_prompt,
+      E.fromNullable(
+        NodeContentMissingError.of('raw_prompt')
+      ),
       E.map((prompt) =>
         pipe(
           prompt.value.match(/{[^}]+}/g) ?? [],
           A.map((s) => s.slice(1, -1).trim()),
           A.filter((s) => s.length > 0),
           (labels) => Array.from(new Set(labels)),
+          (labels) => ['raw_prompt', ...labels],
           A.map(
             (label) =>
               ({
@@ -110,7 +98,7 @@ const promptNode = createNode({
 })
 
 const nodes = {
-  prompt: promptNode,
+  dynamicPrompt: dynamicPromptNode,
 }
 
 export default nodes

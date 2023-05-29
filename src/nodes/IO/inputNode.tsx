@@ -1,14 +1,9 @@
 import { useState } from 'react'
-import {
-  allDataTypes,
-  ComponentProps,
-  createNode,
-  Labels,
-} from '../../types'
+import { createNode, Labels } from '../../types'
 import TextareaAutosize from 'react-textarea-autosize'
 import * as E from 'fp-ts/Either'
 import { pipe } from 'fp-ts/lib/function'
-import { NodeContentMissingError } from '../errors'
+import { NodeContentMissingError } from '../../errors'
 
 const title = 'Input'
 const description =
@@ -16,16 +11,26 @@ const description =
 
 const inputLabels = [] as const satisfies Labels
 
-const outputLabels = [
+const outputLabels: readonly [
   {
-    _tag: allDataTypes,
+    _tag: 'string' | 'number' | 'imageUrl'
+    value: 'input'
+  }
+] = [
+  {
+    _tag: 'string',
     value: 'input',
   },
 ] as const satisfies Labels
 
-const contentLabels = [
+const contentLabels: readonly [
   {
-    _tag: allDataTypes,
+    _tag: 'string' | 'number' | 'imageUrl'
+    value: 'input'
+  }
+] = [
+  {
+    _tag: 'string',
     value: 'input',
   },
 ] as const satisfies Labels
@@ -40,19 +45,19 @@ const nodes = {
       contentLabels,
       contents: {
         input: {
-          _tag: ['string', 'number', 'imageUrl'],
+          _tag: 'string',
           value: '',
         },
       },
     },
     Component: ({ contents, setContents }) => {
-      const inputTypeOptions = ['text', 'number']
+      const inputTypeOptions = ['string', 'number'] as const
       const [inputType, setInputType] = useState<
-        'text' | 'number'
-      >('text')
+        'string' | 'number'
+      >('string')
 
       return (
-        <div>
+        <div className='w-full'>
           <label
             htmlFor='inputTypeSelect'
             className='block text-sm font-semibold mb-1'>
@@ -61,11 +66,14 @@ const nodes = {
           <select
             id='inputTypeSelect'
             value={inputType}
-            onChange={(e) =>
-              setInputType(
-                e.target.value as 'text' | 'number'
-              )
-            }
+            onChange={(e) => {
+              if (
+                e.target.value === 'string' ||
+                e.target.value === 'number'
+              ) {
+                setInputType(e.target.value)
+              }
+            }}
             className='mb-4 w-full p-2 border border-gray-300 rounded-md'>
             {inputTypeOptions.map((option) => (
               <option key={option} value={option}>
@@ -78,15 +86,15 @@ const nodes = {
             className='block text-sm font-semibold mb-1'>
             Value:
           </label>
-          {inputType === 'text' ? (
+          {inputType === 'string' ? (
             <TextareaAutosize
               id='inputField'
-              className='w-full p-2 border border-gray-300 rounded-md nodrag'
+              className='w-full p-2 border border-gray-300 rounded-md nodrag max-h-96'
               value={contents.input?.value}
               onChange={(e) =>
                 setContents({
                   input: {
-                    _tag: ['string', 'number', 'imageUrl'],
+                    _tag: inputType,
                     value: e.target.value,
                   },
                 })
@@ -101,8 +109,8 @@ const nodes = {
               onChange={(e) =>
                 setContents({
                   input: {
-                    _tag: ['string', 'number', 'imageUrl'],
-                    value: e.target.value,
+                    _tag: inputType,
+                    value: parseFloat(e.target.value),
                   },
                 })
               }
@@ -111,21 +119,18 @@ const nodes = {
         </div>
       )
     },
-    func: ({ contents }) => {
-      console.log('running func', contents)
-      return pipe(
+    func: ({ contents }) =>
+      pipe(
         contents.input,
         E.fromNullable(
           NodeContentMissingError.of('output')
         ),
         E.map((output) => ({
           input: {
-            _tag: ['string', 'number', 'imageUrl'],
-            value: output.value,
+            ...output,
           } as const,
         }))
-      )
-    },
+      ),
   }),
 }
 

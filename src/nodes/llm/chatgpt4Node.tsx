@@ -17,8 +17,9 @@ import * as TE from 'fp-ts/TaskEither'
 import { flow, pipe } from 'fp-ts/lib/function'
 import { log } from 'fp-ts/lib/Console'
 
-const title = 'OpenAI ChatGPT'
-const description = 'A node that connects to OpenAi'
+const title = 'OpenAI ChatGPT4'
+const description =
+  "A node that connects to OpenAI's ChatGPT 4"
 const inputLabels = [
   {
     _tag: 'string',
@@ -47,12 +48,12 @@ const headers = {
 }
 
 const getRequest = (prompt: string) => ({
-  model: 'gpt-3.5-turbo',
+  model: 'gpt-4',
   messages: [{ role: 'user', content: prompt }],
 })
 
 const nodes = {
-  chatgpt: createNode({
+  chatgpt4: createNode({
     config: {
       title,
       description,

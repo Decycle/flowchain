@@ -48,6 +48,20 @@ export class NodeComponentIdNotFoundError extends Error {
     new NodeComponentIdNotFoundError(id)
 }
 
+export class ValueConversionError extends Error {
+  _tag = 'ValueConversionError'
+
+  constructor(input_type: string, output_type: string) {
+    super(`
+        Can't convert ${input_type} to ${output_type}`)
+  }
+
+  public static of = (
+    input_type: string,
+    output_type: string
+  ) => new ValueConversionError(input_type, output_type)
+}
+
 export class NodeInputTypeMismatchError extends Error {
   _tag: 'NodeInputTypeMismatchError'
 
