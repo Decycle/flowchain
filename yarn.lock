@@ -2996,12 +2996,7 @@
   "resolved" "https://registry.npmjs.org/yocto-queue/-/yocto-queue-0.1.0.tgz"
   "version" "0.1.0"
 
-"zundo@^2.0.0-beta.18":
-  "integrity" "sha512-A7QhvIWNNwMND7hvnJ/jZPEIqYUEuWoJd5hzSgfGu+jYlnHU0LeBJHn1vqGTgeD1asYXRZZGXPPb4gqz7CEd2w=="
-  "resolved" "https://registry.npmjs.org/zundo/-/zundo-2.0.0-beta.18.tgz"
-  "version" "2.0.0-beta.18"
-
-"zustand@^4.3.0", "zustand@^4.3.1", "zustand@^4.3.8":
+"zustand@^4.3.1", "zustand@^4.3.8":
   "integrity" "sha512-4h28KCkHg5ii/wcFFJ5Fp+k1J3gJoasaIbppdgZFO4BPJnsNxL0mQXBSFgOgAdCdBj35aDTPvdAJReTMntFPGg=="
   "resolved" "https://registry.npmjs.org/zustand/-/zustand-4.3.8.tgz"
   "version" "4.3.8"

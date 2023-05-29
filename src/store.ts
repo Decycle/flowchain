@@ -15,7 +15,6 @@ import {
 import 'reactflow/dist/style.css'
 import { create, useStore } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { TemporalState, temporal } from 'zundo'
 import {
   Contents,
   Datas,
@@ -337,18 +336,10 @@ const flowStore = (
 })
 
 const useFlowStore = create(
-  temporal(
-    persist(flowStore, {
-      name: 'flow-store',
-    })
-  )
+  persist(flowStore, {
+    name: 'flow-store',
+  })
 )
 
-const useTemporalStore = <T>(
-  selector: (state: TemporalState<AppState>) => T,
-  equality?: (a: T, b: T) => boolean
-) => useStore(useFlowStore.temporal, selector, equality)
-
 export type { AppState, DefaultNode }
-export { useTemporalStore }
 export default useFlowStore

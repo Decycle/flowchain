@@ -25,10 +25,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import nodeTypes from './nodes'
 
-import useFlowStore, {
-  AppState,
-  useTemporalStore,
-} from './store'
+import useFlowStore, { AppState } from './store'
 import { shallow } from 'zustand/shallow'
 import SideBar from './sidebar'
 import { toSvg } from 'html-to-image'
@@ -41,6 +38,7 @@ import {
 import BaseNode from './nodes/base/baseNode'
 import nodeConfigs from './nodes'
 import { NodeConfigsString } from './store'
+import deepEqual from 'deep-equal'
 
 const downloadImage = async (dataUrl: string) => {
   const link = document.body.appendChild(
@@ -147,10 +145,6 @@ const App = () => {
 
   const rfInstance = useReactFlow()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
-
-  const { undo, redo, clear } = useTemporalStore(
-    (state) => state
-  )
 
   const onDragOver = useCallback(
     (event: React.DragEvent) => {
