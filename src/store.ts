@@ -13,7 +13,7 @@ import {
 } from 'reactflow'
 
 import 'reactflow/dist/style.css'
-import { create, useStore } from 'zustand'
+import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
   Contents,
@@ -308,15 +308,15 @@ const flowStore = (
   },
 
   onNodesChange: (changes: NodeChange[]) => {
-    set({
-      nodes: applyNodeChanges(changes, get().nodes),
-    })
+    set((state) => ({
+      nodes: applyNodeChanges(changes, state.nodes),
+    }))
   },
 
   onEdgesChange: (changes: EdgeChange[]) => {
-    set({
-      edges: applyEdgeChanges(changes, get().edges),
-    })
+    set((state) => ({
+      edges: applyEdgeChanges(changes, state.edges),
+    }))
   },
 
   onConnect: (params) => {

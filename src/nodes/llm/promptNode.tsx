@@ -1,19 +1,8 @@
-import {
-  Label,
-  ComponentProps,
-  Content,
-  Contents,
-  Labels,
-  createNode,
-  LabelFunc,
-} from '../../types'
+import { Label, Labels, createNode } from '../../types'
 import TextareaAutosize from 'react-textarea-autosize'
 import * as E from 'fp-ts/Either'
 import * as A from 'fp-ts/Array'
-import {
-  NodeContentMissingError,
-  NodeContentTypeMismatchError,
-} from '../../errors'
+import { NodeContentMissingError } from '../../errors'
 import { pipe } from 'fp-ts/lib/function'
 
 const title = 'Prompt'

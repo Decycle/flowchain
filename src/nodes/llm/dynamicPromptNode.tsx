@@ -1,21 +1,8 @@
-import {
-  Label,
-  ComponentProps,
-  Content,
-  Contents,
-  Labels,
-  createNode,
-  LabelFunc,
-} from '../../types'
-import TextareaAutosize from 'react-textarea-autosize'
+import { Label, Labels, createNode } from '../../types'
 import * as E from 'fp-ts/Either'
 import * as A from 'fp-ts/Array'
-import {
-  NodeContentMissingError,
-  NodeContentTypeMismatchError,
-} from '../../errors'
+import { NodeContentMissingError } from '../../errors'
 import { pipe } from 'fp-ts/lib/function'
-import { useState } from 'react'
 
 const title = 'Dynamic Prompt'
 const description =

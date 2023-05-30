@@ -1,4 +1,9 @@
-import { useEffect, useState } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react'
 import { Handle, Position } from 'reactflow'
 import getHandleColor from './utils'
 import useFlowStore, { DefaultNode } from '../../store'
@@ -6,14 +11,12 @@ import {
   AnyNodeComponentType,
   Contents,
   Data,
-  DataTypeMappings,
   Datas,
   Labels,
 } from '../../types'
 import {
   NodeComponentIdMissingError,
   NodeComponentIdNotFoundError,
-  NodeInputTypeMismatchError,
   NodeNotFoundError,
   ValueConversionError,
 } from '../../errors'
@@ -23,14 +26,14 @@ import * as T from 'fp-ts/lib/Task'
 import * as TE from 'fp-ts/lib/TaskEither'
 import * as A from 'fp-ts/lib/Array'
 import * as O from 'fp-ts/lib/Option'
-import { log, monoidObject } from '../../fp-ts-utils'
+import { monoidObject } from '../../fp-ts-utils'
 import { sequenceT } from 'fp-ts/lib/Apply'
-import { shallow } from 'zustand/shallow'
 import nodeComponents from '..'
 import convert from '../../data_type_convert'
 import deepEqual from 'deep-equal'
+import debounce from 'lodash.debounce'
 
-const BaseNode = ({ id }: { id: string }) => {
+const BaseNode = memo(({ id }: { id: string }) => {
   const node = pipe(
     useFlowStore((state) => state.getNode(id)),
     E.fromOption(() => NodeNotFoundError.of(id)),
@@ -202,13 +205,16 @@ const BaseNode = ({ id }: { id: string }) => {
   const [showOutput, setShowOutput] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
 
-  const getLabels = () => {
+  useEffect(() => {
     pipe(
       getInputLabels,
       O.fromNullable,
       O.map((func) =>
         pipe(
-          func({ contents, inputs: parentNodeValues }),
+          func({
+            contents,
+            inputs: parentNodeValues,
+          }),
           E.chainW((labels) =>
             setNodeInputLabels(id, labels)
           ),
@@ -216,9 +222,7 @@ const BaseNode = ({ id }: { id: string }) => {
         )
       )
     )
-  }
-
-  useEffect(getLabels, [
+  }, [
     id,
     contents,
     parentNodeValues,
@@ -227,7 +231,7 @@ const BaseNode = ({ id }: { id: string }) => {
     setNodeOutputLabels,
   ])
 
-  const runFunctions = () => {
+  const runFunctions = useCallback(() => {
     if (lazy) {
       if (!buttonClicked) {
         return
@@ -305,9 +309,7 @@ const BaseNode = ({ id }: { id: string }) => {
       runAfunc(),
       O.map((task) => task())
     )
-  }
-
-  useEffect(runFunctions, [
+  }, [
     func,
     afunc,
     lazy,
@@ -315,7 +317,21 @@ const BaseNode = ({ id }: { id: string }) => {
     id,
     parentNodeValues,
     setNodeOutputs,
-    inputLabels,
+    buttonClicked,
+    contents,
+  ])
+
+  useEffect(() => {
+    debounce(runFunctions, 500)()
+  }, [
+    runFunctions,
+    func,
+    afunc,
+    lazy,
+    isRunning,
+    id,
+    parentNodeValues,
+    setNodeOutputs,
     buttonClicked,
     contents,
   ])
@@ -444,6 +460,12 @@ const BaseNode = ({ id }: { id: string }) => {
         ))}
     </div>
   )
-}
+})
+
+// const BaseNode2 = ({ id }: { id: string }) => {
+
+//   return <div>test</div>
+// }
 
 export default BaseNode
+// export default BaseNode2

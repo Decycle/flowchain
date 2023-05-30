@@ -1,29 +1,14 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useRef, useState } from 'react'
 import ReactFlow, {
   MiniMap,
   Controls,
   Background,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  Connection,
   BackgroundVariant,
-  ReactFlowInstance,
   useReactFlow,
-  Node,
-  Panel,
-  getRectOfNodes,
-  getTransformForBounds,
   ControlButton,
 } from 'reactflow'
 
 import 'reactflow/dist/style.css'
-import nodeTypes from './nodes'
 
 import useFlowStore, { AppState } from './store'
 import { shallow } from 'zustand/shallow'
@@ -38,7 +23,6 @@ import {
 import BaseNode from './nodes/base/baseNode'
 import nodeConfigs from './nodes'
 import { NodeConfigsString } from './store'
-import deepEqual from 'deep-equal'
 
 const downloadImage = async (dataUrl: string) => {
   const link = document.body.appendChild(

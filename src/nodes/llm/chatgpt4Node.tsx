@@ -1,16 +1,7 @@
 import axios from 'axios'
-import {
-  NodeConfig,
-  Label,
-  FunctionInput,
-  NodeComponent,
-  AsyncNodeFunc,
-  Labels,
-  createNode,
-} from '../../types'
+import { Labels, createNode } from '../../types'
 import {
   NodeInputMissingError,
-  NodeInputTypeMismatchError,
   OpenAIChatGPTRequestError,
 } from '../../errors'
 import * as TE from 'fp-ts/TaskEither'

@@ -1,11 +1,5 @@
 import axios from 'axios'
-import {
-  NodeConfig,
-  NodeComponent,
-  AsyncNodeFunc,
-  Labels,
-  createNode,
-} from '../../types'
+import { Labels, createNode } from '../../types'
 import {
   NodeInputMissingError,
   OpenAIChatGPTRequestError,

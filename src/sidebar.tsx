@@ -1,15 +1,5 @@
 import nodeTypes from './nodes'
 
-const nodes = [
-  {
-    label: 'Input',
-    type: 'inputNode',
-  },
-  {
-    label: 'Output',
-    type: 'outputNode',
-  },
-]
 const SideBarItem = ({
   label,
   type,

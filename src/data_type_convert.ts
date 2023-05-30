@@ -21,7 +21,14 @@ const dataTypeConverters: DataTypeConverters = {
     number: identity,
   },
   string: {
-    number: (value: string) => E.right(Number(value)),
+    number: (value: string) => {
+      const parsed = parseFloat(value)
+      return isNaN(parsed)
+        ? E.left(
+            ValueConversionError.of('string', 'number')
+          )
+        : E.right(parsed)
+    },
     imageUrl: (value: string) =>
       pipe(
         value,
