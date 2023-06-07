@@ -1,9 +1,13 @@
-import OpenAiNode from './openAiNode'
-import PromptNode from './promptNode'
+import chatGPTNode from './chatgptNode'
+import chatGPT4Node from './chatgpt4Node'
+import promptNode from './promptNode'
+import dynamicPromptNode from './dynamicPromptNode'
 
-const nodeTypes = {
-  promptNode: PromptNode,
-  openAiNode: OpenAiNode,
+const llmNodes = {
+  ...chatGPTNode,
+  ...chatGPT4Node,
+  ...promptNode,
+  ...dynamicPromptNode,
 }
 
-export default nodeTypes
+export default llmNodes

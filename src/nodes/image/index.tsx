@@ -1,7 +1,7 @@
 import DalleNode from './dalleNode'
 
-const nodeTypes = {
-  dalleNode: DalleNode,
+const ImageNodes = {
+  ...DalleNode,
 }
 
-export default nodeTypes
+export default ImageNodes

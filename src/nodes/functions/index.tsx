@@ -1,11 +1,11 @@
-import {
-  FunctionNode,
-  LazyFunctionNode,
-} from './functionNode'
+// import {
+//   FunctionNode,
+//   LazyFunctionNode,
+// } from './functionNode'
 
-const nodeTypes = {
-  functionNode: FunctionNode,
-  lazyFunctionNode: LazyFunctionNode,
-}
+// const nodeTypes = {
+//   functionNode: FunctionNode,
+//   lazyFunctionNode: LazyFunctionNode,
+// }
 
-export default nodeTypes
+// export default nodeTypes

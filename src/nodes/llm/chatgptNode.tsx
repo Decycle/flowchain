@@ -8,8 +8,8 @@ import * as TE from 'fp-ts/TaskEither'
 import { flow, pipe } from 'fp-ts/lib/function'
 import { log } from 'fp-ts/lib/Console'
 
-const title = 'OpenAI DALLE'
-const description = 'A node that connects to OpenAi DALLE-2'
+const title = 'OpenAI ChatGPT'
+const description = 'A node that connects to OpenAi'
 const inputLabels = [
   {
     _tag: 'string',
@@ -19,16 +19,18 @@ const inputLabels = [
 
 const outputLabels = [
   {
-    _tag: 'imageUrl',
-    value: 'image',
+    _tag: 'string',
+    value: 'model_response',
   },
 ] as const satisfies Labels
+
+const contentLabels = [] as const satisfies Labels
 
 const open_ai_key =
   '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'
 
 const openai_url =
-  'https://api.openai.com/v1/images/generations'
+  'https://api.openai.com/v1/chat/completions'
 
 const headers = {
   'Content-Type': 'application/json',
@@ -36,17 +38,18 @@ const headers = {
 }
 
 const getRequest = (prompt: string) => ({
-  prompt,
+  model: 'gpt-3.5-turbo',
+  messages: [{ role: 'user', content: prompt }],
 })
 
 const nodes = {
-  dalle: createNode({
+  chatgpt: createNode({
     config: {
       title,
       description,
       inputLabels,
       outputLabels,
-      contentLabels: [],
+      contentLabels,
       lazy: true,
     },
     afunc: ({ inputs }) =>
@@ -79,12 +82,13 @@ const nodes = {
         ),
         TE.map((response) => {
           const response_data = {
-            image: {
-              _tag: 'imageUrl',
-              value: response.data.data[0].url as string,
-              image: 'a',
+            model_response: {
+              _tag: 'string',
+              value: response.data.choices[0].message
+                .content as string,
             } as const,
           }
+          console.log('response_data', response_data)
           return response_data
         })
       ),

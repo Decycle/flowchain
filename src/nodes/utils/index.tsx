@@ -1,7 +1,6 @@
-import SplitNode from './splitNode'
+// import SplitNode from './splitNode'
+// const nodeTypes = {
+//   splitNode: SplitNode,
+// }
 
-const nodeTypes = {
-  splitNode: SplitNode,
-}
-
-export default nodeTypes
+// export default nodeTypes

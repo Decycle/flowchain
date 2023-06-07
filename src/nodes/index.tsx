@@ -1,15 +1,16 @@
-import baseNodeTypes from './base'
-import llmNodeTypes from './llm'
-import imageNodeTypes from './image'
-import functionNodeTypes from './functions'
-import utilNodeTypes from './utils'
+import IONodes from './IO'
+import LLMNodes from './llm'
+import imageNodes from './image'
 
-const nodeTypes = {
-  ...baseNodeTypes,
-  ...llmNodeTypes,
-  ...imageNodeTypes,
-  ...functionNodeTypes,
-  ...utilNodeTypes,
+const nodeComponents = {
+  ...IONodes,
+  ...LLMNodes,
+  ...imageNodes,
 }
 
-export default nodeTypes
+export type AllNodeComponentType = typeof nodeComponents
+export type AllNodeConfigType = {
+  [K in keyof AllNodeComponentType]: AllNodeComponentType[K]['config']
+}[keyof AllNodeComponentType]
+
+export default nodeComponents
