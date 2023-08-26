@@ -1,147 +1,153 @@
-// import { useEffect, useState } from 'react'
-// import { useCallback } from 'react'
-// import GenericNode, { NodeFunc } from '../base/genericNode'
-// import useFlowStore from '../../store'
+import { useEffect, useState } from 'react'
+import { useCallback } from 'react'
+import { Labels, createNode } from '../../types'
+import * as E from 'fp-ts/Either'
 
-// import AceEditor from 'react-ace'
-// import 'ace-builds/src-noconflict/mode-javascript'
-// import 'ace-builds/src-noconflict/theme-dracula'
+import AceEditor from 'react-ace'
+import 'ace-builds/src-noconflict/mode-javascript'
+import 'ace-builds/src-noconflict/theme-dracula'
+import { pipe } from 'fp-ts/lib/function'
 
-// type NodeProps = {
-//   id: string
-//   lazy?: boolean
-// }
+const title = 'Function'
+const description =
+  'Lets you run a custom javascript function'
 
-// const description =
-//   'Lets you run a custom javascript function (fast updates)'
-// const outputLabels = ['result']
+const inputLabels: ReadonlyArray<{
+  _tag: 'string'
+  value: string
+}> = [] as const
 
-// const BaseFunctionNode = ({ id, lazy }: NodeProps) => {
-//   const [title, setTitle] = useState('Function')
-//   const [labels, setLabels] = useState<string[]>([])
+const outputLabels = [
+  {
+    _tag: 'string',
+    value: 'result',
+  },
+] as const satisfies Labels
 
-//   const [value, setValue, setNodeDataValue] = useFlowStore(
-//     (state) => {
-//       const value =
-//         state.nodes.find((node) => node.id === id)?.data
-//           .userValues?.function ?? ''
+const contentLabels = [
+  {
+    _tag: 'string',
+    value: 'function',
+  },
+] as const satisfies Labels
 
-//       const setValue = (id: string, value: string) => {
-//         state.setNodeUserValue(id, { function: value })
-//       }
+const getArgs = (raw_string: string) => {
+    const argPattern = /function\s?(.*)\(([^)]*)\)/ // Regular expression pattern
+    const matches = raw_string.match(argPattern) // Get array with matched strings
 
-//       return [value, setValue, state.setNodeDataValue]
-//     }
-//   )
+    // console.log("raw_string", raw_string)
+    // console.log("matches", matches)
+    if (matches) {
+        const name = matches[1].trim() // Get first matched substring
+        const args = matches[2] // Get first matched substring
+        .split(',') // Split arguments in the form 'arg1, arg2, arg3'
+        .map((arg: string) => arg.trim()) // Trim whitespace around each argument
+        .filter((arg: string) => arg) // Remove empty ones
 
-//   const [customFunc, setCustomFunc] = useState<any>(null)
+        return [name, args] as [string, string[]]
+    }
+    return [null, []] as [null, string[]]
+}
 
-//   const compileFunction = useEffect(() => {
-//     console.log('compiling function')
+const getBody = (raw_string: string) => {
+    const bodyPattern = /{([\s\S]*)}/ // Regular expression pattern
+    const body = raw_string.match(bodyPattern)?.[1] // Get array with matched strings
+    return body
+}
 
-//     const getArgs = (raw_string: string) => {
-//       const argPattern = /function\s(.*)\(([^)]*)\)/ // Regular expression pattern
-//       const matches = raw_string.match(argPattern) // Get array with matched strings
+const node = {
+    function: createNode({
+        config: {
+            title,
+            description,
+            inputLabels,
+            outputLabels,
+            contentLabels,
+            // lazy: true,
+        },
+        func: ({ inputs, contents }) => {
+            // console.log('inputs', inputs)
 
-//       if (matches) {
-//         const name = matches[1].trim() // Get first matched substring
-//         const args = matches[2] // Get first matched substring
-//           .split(',') // Split arguments in the form 'arg1, arg2, arg3'
-//           .map((arg: string) => arg.trim()) // Trim whitespace around each argument
-//           .filter((arg: string) => arg) // Remove empty ones
+            const [name, args] = getArgs(contents.function?.value ?? '')
+            const body = getBody(contents.function?.value ?? '')
 
-//         return [name, args] as [string, string[]]
-//       }
-//       return [null, []] as [null, string[]]
-//     }
+            const customFunc = pipe(
+                E.fromNullable(new Error("no function body"))(body),
+                E.chainW((body) =>
+                    E.tryCatch(
+                        () => new Function(...args, body),
+                        (reason) => new Error(String(reason))
+                )),
+            )
+            // if (E.isRight(customFunc)) {
+            //     console.log('customFunc', customFunc.right({a: 1}))
+            // }
 
-//     const getBody = (raw_string: string) => {
-//       const bodyPattern = /{([\s\S]*)}/ // Regular expression pattern
-//       const body = raw_string.match(bodyPattern)?.[1] // Get array with matched strings
-//       return body
-//     }
+            const result = pipe(
+                customFunc,
+                E.chain((func) => {
+                    for (const key of args) {
+                        if (inputs[key] === null) {
+                            return E.left(new Error(`missing input ${key}`))
+                        }
+                    }
+                    return E.right(func)
+                }),
+                E.chain((func) =>
+                    E.tryCatch(
+                        () => func(...args.map((key) => inputs[key]?.value)),
+                        (reason) => new Error(String(reason))
+                    ),
+                ),
+                E.map((result) => ({
+                    result: {
+                        _tag: "string",
+                        value: result.toString()
+                    } as const
+                }))
+            )
 
-//     const [name, args] = getArgs(value)
-//     const body = getBody(value)
+            console.log("inputs", inputs)
+            console.log("contents", contents)
+            console.log("result", result)
 
-//     if (!body) {
-//       return
-//     }
+            return result
+        },
+        Component: ({ contents, setContents }) => {
 
-//     try {
-//       const func = new Function(...args, body)
-//       if (name) {
-//         const title =
-//           name.charAt(0).toUpperCase() + name.slice(1)
-//         setTitle(title)
-//       }
-//       setLabels(args)
-//       setCustomFunc(() => func)
-//     } catch (e) {
-//       console.error(e)
-//     }
-//   }, [value])
+            // console.log('contents', contents)
+            return  <AceEditor
+            value={contents.function?.value.toString() ?? ''}
+            height='200px'
+            mode='javascript'
+            theme='dracula'
+            onChange={(e) => setContents({
+                function: {
+                    _tag: 'string',
+                    value: e
+                }
+            })}
+            className='w-full p-2 rounded-md mb-4 nodrag'
+            placeholder='function(a, b) { return a + b }'
+            />
+        },
+        getInputLabels: ({contents}) => {
+            const [name, args] = getArgs(contents.function?.value ?? '')
+            return E.right(
+                args.map((arg) => ({
+                        _tag: 'string',
+                        value: arg,
+                    } as const
+                ))
+            )
+        },
+        getTitle: (contents) => {
+            const [name, args] = getArgs(contents.function?.value ?? '')
+            return name ?? 'function'
+        },
 
-//   const func = useCallback<NodeFunc>(
-//     (inputs) => {
-//       console.log('inputs', inputs)
-//       console.log('labels', labels)
-//       console.log('customFunc', customFunc)
-//       for (const key of labels) {
-//         if (inputs[key] === null) {
-//           return {}
-//         }
-//       }
 
-//       if (!customFunc) {
-//         console.error('no custom func')
-//         return {}
-//       }
+    })
+}
 
-//       try {
-//         const result = customFunc(
-//           ...labels.map((key) => inputs[key])
-//         )
-//         return { result }
-//       } catch (e) {
-//         console.error(e)
-//         return {}
-//       }
-//     },
-//     [labels, customFunc]
-//   )
-
-//   return (
-//     <GenericNode
-//       data={{
-//         title,
-//         description,
-//         inputLabels: labels,
-//         outputLabels,
-//         func,
-//       }}
-//       id={id}
-//       lazy={lazy}>
-//       <AceEditor
-//         value={value}
-//         height='200px'
-//         mode='javascript'
-//         theme='dracula'
-//         onChange={(e) => setValue(id, e)}
-//         className='w-full p-2 rounded-md mb-4 nodrag'
-//         placeholder='function(a, b) { return a + b }'
-//       />
-//     </GenericNode>
-//   )
-// }
-
-// const FunctionNode = ({ id }: NodeProps) => {
-//   return <BaseFunctionNode id={id} lazy={false} />
-// }
-
-// const LazyFunctionNode = ({ id }: NodeProps) => {
-//   return <BaseFunctionNode id={id} lazy={true} />
-// }
-
-// export { FunctionNode, LazyFunctionNode }
-// export default BaseFunctionNode
+export default node
